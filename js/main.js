@@ -23,7 +23,12 @@ window.onload = () => {
     let dt = null;
     let n_frames = 0;
 
-    do_animation = timestep => {
+    const advance_and_render = dt => {
+        solver.advance(gl, dt);
+        solver.render(gl);
+    }
+
+    const do_animation = timestep => {
         n_frames++;
         if (last_timestep !== null) {
             const dt_this_frame = (timestep - last_timestep) / 1000.;
@@ -35,8 +40,7 @@ window.onload = () => {
                 dt += (dt_this_frame - dt) / n_frames;
             }
 
-            solver.advance(gl, dt);
-            solver.render(gl);
+            advance_and_render(dt);
         }
 
         if (is_animating) {
@@ -58,10 +62,8 @@ window.onload = () => {
             }
         }
         else if (event.key == 'ArrowRight') {
-            is_animating = true;
-            window.requestAnimationFrame(do_animation);
-            is_animating = false;
-            window.requestAnimationFrame(do_animation);
+            const adv_dt = dt === null ? 1/60 : dt;
+            advance_and_render(adv_dt);
         }
     }
 }
