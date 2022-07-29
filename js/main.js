@@ -506,6 +506,10 @@ class ShallowWaterSolver extends WebGLEntity {
         // Now copy the injection framebuffer back into the main state
         this._bindTexture(gl, 0, this.inject_state_texture);
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.state['nx'], this.state['ny'], 0);
+
+        // Delete injected state texture
+        gl.deleteTexture(texture['texture']);
+        gl.deleteBuffer(texture['tex_coord']);
     }
 
     advance(gl, dt) {
