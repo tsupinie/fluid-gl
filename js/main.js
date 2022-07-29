@@ -67,6 +67,12 @@ window.onload = () => {
             advance_and_render(adv_dt);
         }
     }
+
+    window.onclick = event => {
+        let state = create_shallow_water_state(nx, ny, 'drop', event.offsetX, ny - event.offsetY);
+        state = {...state, 'nx': nx, 'ny': ny};
+        solver.inject_state(gl, state);
+    }
 }
 
 function create_shallow_water_state() {
@@ -297,7 +303,7 @@ class ShallowWaterSolver extends WebGLEntity {
         }
         `;
 
-        const ic_fragment_shader_src = `
+        const inject_fragment_shader_src = `
         uniform sampler2D u_sampler;
 
         varying highp vec2 v_tex_coord;
@@ -400,18 +406,18 @@ class ShallowWaterSolver extends WebGLEntity {
 
         void main() {
             highp vec3 tex = texture2D(u_sampler, v_tex_coord).rgb;
-            gl_FragColor = vec4(abs(tex), 1.);
+            gl_FragColor = vec4(sqrt(sqrt(abs(tex))), 1.);
         }
         `;
 
-        const ic_program = this._compileAndLinkShaders(gl, vertex_shader_src, ic_fragment_shader_src);
+        this.inject_program = this._compileAndLinkShaders(gl, vertex_shader_src, inject_fragment_shader_src);
         this.program = this._compileAndLinkShaders(gl, vertex_shader_src, fragment_shader_src);
         this.render_program = this._compileAndLinkShaders(gl, vertex_shader_src, render_fragment_shader_src);
 
         const verts = new Float32Array([-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
         const tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
 
-        const ic_vertices = this._setupVertices(gl, ic_program, verts, 2, 'a_pos');
+        this.inject_vertices = this._setupVertices(gl, this.inject_program, verts, 2, 'a_pos');
         this.vertices = this._setupVertices(gl, this.program, verts, 2, 'a_pos');
         this.render_vertices = this._setupVertices(gl, this.render_program, verts, 2, 'a_pos');
 
@@ -419,23 +425,14 @@ class ShallowWaterSolver extends WebGLEntity {
         this.render_texcoords = this._setupVertices(gl, this.render_program, tex_coords, 2, 'a_tex_coord');
 
         this.render_u_sampler = gl.getUniformLocation(this.render_program, 'u_sampler');
-
-        // Set up IC texture
-        const img_data = new Float32Array(this.state['z'].length * 4);
-        for (let idx = 0; idx < this.state['z'].length; idx++) {
-            img_data[4 * idx + 0] = this.state['z'][idx];
-            img_data[4 * idx + 1] = this.state['u'][idx];
-            img_data[4 * idx + 2] = this.state['v'][idx];
-            img_data[4 * idx + 3] = 0.;
-        }
         
-        const ic_img = {
+        this.inject_img = {
             'format': gl.RGBA, 'type': gl.FLOAT, 
-            'width': this.state['nx'], 'height': this.state['ny'], 'image': img_data,
+            'width': this.state['nx'], 'height': this.state['ny'], 'image': null,
             'mag_filter': gl.LINEAR
         }
 
-        const ic_texture = this._setupTexture(gl, ic_img, ic_program, 'u_sampler', tex_coords, 'a_tex_coord');
+        this.inject_texture = this._setupTexture(gl, this.inject_img, this.inject_program, 'u_sampler', tex_coords, 'a_tex_coord');
 
         // Set up model state textures and framebuffers
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
@@ -462,17 +459,41 @@ class ShallowWaterSolver extends WebGLEntity {
             this.stages.push({'framebuffer': framebuffer, 'texture': texture, 'sampler': sampler});
         }
 
-        // Put the model ICs into the state framebuffer
-        gl.useProgram(ic_program);
+        this.is_initialized = true;
+    }
+
+    inject_state(gl, state) {
+        if (state['nx'] != this.state['nx'] || state['ny'] != this.state['ny']) {
+            throw `State dimension mismatch. Expected (${this.state['nx']}, ${this.state['ny']}), received (${state['nx']}, ${state['hy']})`;
+        }
+
+        if (state['z'].length != state['nx'] * state['ny']) {
+            throw `State dimensions (${state['nx']}, ${state['ny']}) and data length ${state['z'].length} do not match`;
+        }
+        
+        // Set up texture
+        const img_data = new Float32Array(state['z'].length * 4);
+        for (let idx = 0; idx < state['z'].length; idx++) {
+            img_data[4 * idx + 0] = state['z'][idx];
+            img_data[4 * idx + 1] = state['u'][idx];
+            img_data[4 * idx + 2] = state['v'][idx];
+            img_data[4 * idx + 3] = 0.;
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, this.inject_texture['texture']);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this.inject_img['format'], this.state['nx'], this.state['ny'], 0, 
+            this.inject_img['format'], this.inject_img['type'], img_data);        
+
+        // Put the state into the state framebuffer
+        gl.useProgram(this.inject_program);
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.stages[0]['framebuffer']);
         gl.viewport(0, 0, this.state['nx'], this.state['ny']);
 
-        this._bindVertices(gl, ic_vertices);
-        this._bindTexture(gl, 0, ic_texture);
+        this._bindVertices(gl, this.inject_vertices);
+        this._bindTexture(gl, 0, this.inject_texture);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-        this.is_initialized = true;
+        this.render(gl);
     }
 
     advance(gl, dt) {
