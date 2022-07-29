@@ -19,7 +19,7 @@ window.onload = () => {
     solver.setup(gl);
     solver.render(gl);
     let last_timestep = null;
-    let is_animating = false;
+    let is_animating = true;
 
     let dt = null;
     let n_frames = 0;
@@ -49,6 +49,8 @@ window.onload = () => {
             window.requestAnimationFrame(do_animation);
         }
     }
+
+    window.requestAnimationFrame(do_animation);
 
     window.onkeydown = event => {
         if (event.key == ' ') {
