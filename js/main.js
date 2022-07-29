@@ -12,7 +12,8 @@ window.onload = () => {
 
     const nx = canvas.width / 2;
     const ny = canvas.height / 2;
-    const initial_state = create_shallow_water_state(nx, ny, 0.1, 'bump');
+    let initial_state = create_shallow_water_state(nx, ny, 'quiescent');
+    initial_state = {...initial_state, 'nx': nx, 'ny': ny, 'dx': 0.1};
 
     const solver = new ShallowWaterSolver(initial_state);
     solver.setup(gl);
@@ -68,50 +69,85 @@ window.onload = () => {
     }
 }
 
-function create_shallow_water_state(nx, ny, dx, method) {
-    method = method === undefined ? 'random' : method;
+function create_shallow_water_state() {
+    const nx = arguments[0];
+    const ny = arguments[1];
+    const method = arguments[2] === undefined ? 'random' : arguments[2];
+    const method_args = [...arguments].slice(3);
 
     const initial_z = new Float32Array(nx * ny);
     const initial_u = new Float32Array(nx * ny);
     const initial_v = new Float32Array(nx * ny);
 
     const random_ics = () => {
-        for (let j = 0; j < ny; j++) {
-            for (let i = 0; i < nx; i++) {
-                const idx = i + nx * j;
-                initial_z[idx] = Math.random();
-                initial_u[idx] = Math.random();
-                initial_v[idx] = Math.random();
-            }
+        return (i, j, idx) => {
+            initial_z[idx] = Math.random();
+            initial_u[idx] = Math.random();
+            initial_v[idx] = Math.random();
         }
     }
 
-    const bump = () => {
-        const filter_width = nx / 64;
-        for (let j = 0; j < ny; j++) {
-            for (let i = 0; i < nx; i++) {
-                const idx = i + nx * j;
-                const x_term = (i - nx / 4) / filter_width;
-                const y_term = (j - ny / 2) / filter_width;
-                initial_z[idx] = 2 * Math.exp(-(x_term * x_term) - (y_term * y_term));
-                initial_u[idx] = 0.
-                initial_v[idx] = 0.
-            }
+    const quiescent = () => {
+        return (i, j, idx) => {    
+            initial_z[idx] = 0.;
+            initial_u[idx] = 0.;
+            initial_v[idx] = 0.;
         }
     }
 
-    const gen_meth = {
+    const bump = (center_x, center_y, filter_width) => {
+        center_x = center_x === undefined ? nx / 4 : center_x;
+        center_x = center_y === undefined ? nx / 3 : center_y;
+        filter_width = filter_width === undefined ? nx / 64 : filter_width;
+
+        return (i, j, idx) => {
+            const x_term = (i - center_x) / filter_width;
+            const y_term = (j - center_y) / filter_width;
+            initial_z[idx] = 2 * Math.exp(-(x_term * x_term) - (y_term * y_term));
+            initial_u[idx] = 0.
+            initial_v[idx] = 0.
+        }
+    }
+
+    const drop = (center_x, center_y, filter_width, amplitude, shape) => {
+        center_x = center_x === undefined ? nx / 4 : center_x;
+        center_y = center_y === undefined ? ny / 3 : center_y;
+        filter_width = filter_width === undefined ? nx / 64 : filter_width;
+        amplitude = amplitude === undefined ? 1 : amplitude;
+        shape = shape === undefined ? 10 : shape;
+
+        return (i, j, idx) => {
+            const x_term = (i - center_x) / filter_width;
+            const y_term = (j - center_y) / filter_width;
+    
+            initial_z[idx] = shape * Math.exp(-(x_term * x_term + y_term * y_term)) 
+                            - (shape + amplitude) * Math.exp(-(x_term * x_term + y_term * y_term) * (shape + amplitude) / shape);
+            initial_u[idx] = 0.;
+            initial_v[idx] = 0.;
+        }
+    }
+
+    const gen = {
         'random': random_ics,
-        'bump': bump
+        'quiescent': quiescent,
+        'bump': bump,
+        'drop': drop,
     }[method];
 
-    if (gen_meth === undefined) {
+    if (gen === undefined) {
         throw `Unknown generation method '${method}'`;
     }
 
-    gen_meth();
+    const gen_meth = gen(...method_args);
 
-    return {'nx': nx, 'ny': ny, 'dx': dx, 'z': initial_z, 'u': initial_u, 'v': initial_v};
+    for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+            const idx = i + nx * j;  
+            gen_meth(i, j, idx);
+        }
+    }
+
+    return {'z': initial_z, 'u': initial_u, 'v': initial_v};
 }
 
 class WebGLEntity {
