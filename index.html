@@ -4,6 +4,9 @@
         <script type="text/javascript" src="js/main.js"></script>
     </head>
     <style>
+        body {
+            font-family: "Trebuchet MS";
+        }
         #main {
             position: absolute;
             top: 0px;
@@ -12,8 +15,33 @@
             width: 100%;
             height: 100%;
         }
+
+        div#readout {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            color: #ffffff;
+            cursor: default;
+        }
+
+        div#instructions {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 100%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 3em;
+            color: #ffffff;
+            cursor: default;
+        }
     </style>
     <body>
         <canvas id="main"></canvas>
+        <div id="readout">120 FPS</div>
+        <div id="instructions">Click to throw a rock into the water
+            <br>Click as many times as you like
+            <br>Use the spacebar to pause/unpause the simulation
+        </div>
     </body>
 </html>

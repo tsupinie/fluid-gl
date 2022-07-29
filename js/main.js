@@ -2,6 +2,9 @@ window.onload = () => {
     const canvas = document.getElementById('main');
     const canvas_rect = canvas.getBoundingClientRect();
 
+    const readout = document.getElementById('readout');
+    const instructions = document.getElementById('instructions');
+
     canvas.width = canvas_rect.width * 2;
     canvas.height = canvas_rect.height * 2;
 
@@ -21,8 +24,11 @@ window.onload = () => {
     let last_timestep = null;
     let is_animating = true;
 
-    let dt = null;
+    let dt = 1/105;
+    let fps = null;
     let n_frames = 0;
+    const n_frames_mean = 600;
+    let fps_list = [];
 
     const advance_and_render = dt => {
         solver.advance(gl, dt);
@@ -32,17 +38,21 @@ window.onload = () => {
     const do_animation = timestep => {
         n_frames++;
         if (last_timestep !== null) {
-            const dt_this_frame = (timestep - last_timestep) / 1000.;
+            const fps_this_frame = 1000. / (timestep - last_timestep);
+            fps_list.push(fps_this_frame);
+            const fps_first_frame = fps_list.length > n_frames_mean ? fps_list.shift() : 0;
 
-            if (dt === null) {
-                dt = dt_this_frame
+            if (fps === null) {
+                fps = fps_this_frame
             }
             else {
-                dt += (dt_this_frame - dt) / n_frames;
+                fps += fps_first_frame == 0 ? (fps_this_frame - fps) / n_frames : (fps_this_frame - fps_first_frame) / n_frames;
             }
 
-            advance_and_render(dt);
+            readout.innerHTML = `${Math.round(fps * 100) / 100} FPS (${Math.round(fps * dt * 10) / 10} &times; realtime)`;
         }
+
+        advance_and_render(dt);
 
         if (is_animating) {
             last_timestep = timestep;
@@ -65,15 +75,15 @@ window.onload = () => {
             }
         }
         else if (event.key == 'ArrowRight') {
-            const adv_dt = dt === null ? 1/60 : dt;
-            advance_and_render(adv_dt);
+            advance_and_render(dt);
         }
     }
 
     window.onclick = event => {
-        let state = create_shallow_water_state(nx, ny, 'drop', event.offsetX, ny - event.offsetY);
+        let state = create_shallow_water_state(nx, ny, 'drop', event.pageX, ny - event.pageY);
         state = {...state, 'nx': nx, 'ny': ny};
         solver.inject_state(gl, state);
+        instructions.style.display = 'none';
     }
 }
 
