@@ -96,11 +96,7 @@ function create_shallow_water_state() {
     }
 
     const quiescent = () => {
-        return (i, j, idx) => {    
-            initial_z[idx] = 0.;
-            initial_u[idx] = 0.;
-            initial_v[idx] = 0.;
-        }
+        return (i, j, idx) => {}
     }
 
     const bump = (center_x, center_y, filter_width) => {
@@ -112,8 +108,6 @@ function create_shallow_water_state() {
             const x_term = (i - center_x) / filter_width;
             const y_term = (j - center_y) / filter_width;
             initial_z[idx] = 2 * Math.exp(-(x_term * x_term) - (y_term * y_term));
-            initial_u[idx] = 0.
-            initial_v[idx] = 0.
         }
     }
 
@@ -124,14 +118,18 @@ function create_shallow_water_state() {
         amplitude = amplitude === undefined ? 1 : amplitude;
         shape = shape === undefined ? 10 : shape;
 
+        const shape_fac = (shape + amplitude) / shape;
+        const o_filter_width = 1 / filter_width;
+        const cutoff = filter_width * 4;
+
         return (i, j, idx) => {
-            const x_term = (i - center_x) / filter_width;
-            const y_term = (j - center_y) / filter_width;
-    
-            initial_z[idx] = shape * Math.exp(-(x_term * x_term + y_term * y_term)) 
-                            - (shape + amplitude) * Math.exp(-(x_term * x_term + y_term * y_term) * (shape + amplitude) / shape);
-            initial_u[idx] = 0.;
-            initial_v[idx] = 0.;
+            if (Math.abs(i - center_x) < cutoff && Math.abs(j - center_y) < cutoff) {
+                const x_term = (i - center_x) * o_filter_width;
+                const y_term = (j - center_y) * o_filter_width;
+                const rad_term = -x_term * x_term - y_term * y_term;
+        
+                initial_z[idx] = shape * Math.exp(rad_term) - (shape + amplitude) * Math.exp(rad_term * shape_fac);
+            }
         }
     }
 
