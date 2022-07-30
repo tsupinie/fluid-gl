@@ -6,6 +6,7 @@
     <style>
         body {
             font-family: "Trebuchet MS";
+            background-color: black;
         }
         #main {
             position: absolute;
@@ -31,17 +32,30 @@
             width: 100%;
             transform: translate(-50%, -50%);
             text-align: center;
-            font-size: 3em;
+            font-size: 2.5em;
             color: #ffffff;
             cursor: default;
+        }
+
+        span.key {
+            border: 1px solid white;
+            background-color: #ffffff33;
+            padding-left: 0.5em;
+            padding-right: 0.5em;
+            border-radius: 0.2em;
+        }
+        
+        span.spacer {
+            display: inline-block;
+            width: 6em;
+            height: 1.5em;
         }
     </style>
     <body>
         <canvas id="main"></canvas>
         <div id="readout">120 FPS</div>
-        <div id="instructions">Click to throw a rock into the water
-            <br>Click as many times as you like
-            <br>Use the spacebar to pause/unpause the simulation
+        <div id="instructions">Click to throw a rock into the water as many times as you like
+            <br><span class="key">SPACE</span> Pause/unpause<span class="spacer"></span><span class="key">ESC</span> Reset
         </div>
     </body>
 </html>

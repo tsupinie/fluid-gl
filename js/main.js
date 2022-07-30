@@ -77,6 +77,11 @@ window.onload = () => {
         else if (event.key == 'ArrowRight') {
             advance_and_render(dt);
         }
+        else if (event.key == 'Escape') {
+            let state = create_shallow_water_state(nx, ny, 'quiescent');
+            state = {...state, 'nx': nx, 'ny': ny};
+            solver.inject_state(gl, state, true);
+        }
     }
 
     window.onclick = event => {
@@ -476,7 +481,9 @@ class ShallowWaterSolver extends WebGLEntity {
         this.is_initialized = true;
     }
 
-    inject_state(gl, state) {
+    inject_state(gl, state, clear_state) {
+        clear_state = clear_state === undefined ? false : clear_state;
+
         if (state['nx'] != this.state['nx'] || state['ny'] != this.state['ny']) {
             throw `State dimension mismatch. Expected (${this.state['nx']}, ${this.state['ny']}), received (${state['nx']}, ${state['hy']})`;
         }
@@ -504,6 +511,14 @@ class ShallowWaterSolver extends WebGLEntity {
 
         // Combine the current state and new texture into the injection framebuffer
         gl.useProgram(this.inject_program);
+
+        if (clear_state) {
+            // If we want to clear first, clear the main state buffer
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.stages[0]['framebuffer']);
+            gl.clearColor(0., 0., 0., 1.);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.inject_framebuffer);
         gl.viewport(0, 0, this.state['nx'], this.state['ny']);
 
