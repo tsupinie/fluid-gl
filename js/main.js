@@ -8,6 +8,8 @@ window.onload = () => {
     canvas.width = canvas_rect.width * 2;
     canvas.height = canvas_rect.height * 2;
 
+    let mouse_x = null, mouse_y = null;
+
     const gl = canvas.getContext('webgl');
 
     gl.clearColor(0., 0., 0., 1.);
@@ -37,6 +39,7 @@ window.onload = () => {
 
     const do_animation = timestep => {
         n_frames++;
+        let readout_str = "";
         if (last_timestep !== null) {
             const fps_this_frame = 1000. / (timestep - last_timestep);
             fps_list.push(fps_this_frame);
@@ -49,10 +52,16 @@ window.onload = () => {
                 fps += fps_first_frame == 0 ? (fps_this_frame - fps) / n_frames : (fps_this_frame - fps_first_frame) / n_frames;
             }
 
-            readout.innerHTML = `${Math.round(fps * 100) / 100} FPS (${Math.round(fps * dt * 10) / 10} &times; realtime)`;
+            readout_str = `${Math.round(fps * 100) / 100} FPS (${Math.round(fps * dt * 10) / 10} &times; realtime)`;
         }
 
         advance_and_render(dt);
+
+        if (mouse_x !== null && mouse_y !== null) {
+            
+        }
+
+        readout.innerHTML = readout_str;
 
         if (is_animating) {
             last_timestep = timestep;
@@ -89,6 +98,11 @@ window.onload = () => {
         state = {...state, 'nx': nx, 'ny': ny};
         solver.inject_state(gl, state);
         instructions.style.display = 'none';
+    }
+
+    window.onmousemove = event => {
+        mouse_x = event.pageX;
+        mouse_y = event.pageY;
     }
 }
 
