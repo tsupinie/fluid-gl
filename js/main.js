@@ -348,6 +348,7 @@ class ShallowWaterSolver extends WebGLEntity {
         const fragment_shader_src = `
         uniform sampler2D u_stage0_sampler;
         uniform sampler2D u_stage1_sampler;
+        uniform sampler2D u_stage2_sampler;
 
         uniform highp vec2 u_unit;
         uniform highp float u_dx;
@@ -377,6 +378,12 @@ class ShallowWaterSolver extends WebGLEntity {
                 tex_im1 = texture2D(u_stage1_sampler, v_tex_coord - ihat).rgb;
                 tex_jp1 = texture2D(u_stage1_sampler, v_tex_coord + jhat).rgb;
                 tex_jm1 = texture2D(u_stage1_sampler, v_tex_coord - jhat).rgb;
+            }
+            else if (u_istage == 2) {
+                tex_ip1 = texture2D(u_stage2_sampler, v_tex_coord + ihat).rgb;
+                tex_im1 = texture2D(u_stage2_sampler, v_tex_coord - ihat).rgb;
+                tex_jp1 = texture2D(u_stage2_sampler, v_tex_coord + jhat).rgb;
+                tex_jm1 = texture2D(u_stage2_sampler, v_tex_coord - jhat).rgb;
             }
 
             hght = tex.r;
@@ -410,12 +417,18 @@ class ShallowWaterSolver extends WebGLEntity {
             dtex_dt.gb = -9.806 * vec2(dz_dx, dz_dy) - wind.x * dwind_dx - wind.y * dwind_dy + kinematic_viscosity * (d2wind_dx2 + d2wind_dy2);
 
             if (u_istage == 0) {
-                highp vec3 out_tex = tex + u_dt * dtex_dt;
+                highp vec3 out_tex = tex + u_dt / 3. * dtex_dt;
                 gl_FragColor = vec4(out_tex, 1.);
             }
             else if (u_istage == 1) {
                 highp vec3 tex_stage0 = texture2D(u_stage0_sampler, v_tex_coord).rgb;
-                highp vec3 out_tex = 0.5 * ((tex_stage0 + tex) + u_dt * dtex_dt);
+                highp vec3 out_tex = tex_stage0 + 0.5 * u_dt * dtex_dt;
+    
+                gl_FragColor = vec4(out_tex, 1.);
+            }
+            else if (u_istage == 2) {
+                highp vec3 tex_stage0 = texture2D(u_stage0_sampler, v_tex_coord).rgb;
+                highp vec3 out_tex = tex_stage0 + u_dt * dtex_dt;
 
                 // Apply impermeability condition for u and v
                 if (v_tex_coord.x - ihat.x < 0. || v_tex_coord.x + ihat.x > 1.) {
@@ -469,7 +482,7 @@ class ShallowWaterSolver extends WebGLEntity {
             'mag_filter': gl.LINEAR
         }
 
-        const n_stages = 2;
+        const n_stages = 3;
         this.stages = [];
 
         for (let istg = 0; istg < n_stages + 1; istg++) {
