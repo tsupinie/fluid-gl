@@ -18,7 +18,7 @@ window.onload = () => {
     const nx = canvas.width / 2;
     const ny = canvas.height / 2;
     let initial_state = create_shallow_water_state(nx + 1, ny + 1, 'quiescent');
-    initial_state = {...initial_state, 'nx': nx + 1, 'ny': ny + 1, 'dx': 0.1};
+    initial_state = {...initial_state, 'nx': nx + 1, 'ny': ny + 1, 'dx': 0.09};
 
     const solver = new ShallowWaterSolver(initial_state);
     solver.setup(gl);
@@ -357,6 +357,11 @@ class ShallowWaterSolver extends WebGLEntity {
 
         varying highp vec2 v_tex_coord;
 
+        // Constants
+        highp float mean_depth = 5.;
+        highp float kinematic_viscosity = 1e-2;
+        highp float inv_turb_prandtl = 3.;
+
         void main() {
             highp vec2 ihat = vec2(u_unit.x, 0.);
             highp vec2 jhat = vec2(0., u_unit.y);
@@ -364,7 +369,7 @@ class ShallowWaterSolver extends WebGLEntity {
             highp vec3 tex, tex_ip1, tex_jp1, tex_im1, tex_jm1, tex_ip1half, tex_im1half, tex_jp1half, tex_jm1half, tex_ip1_jm1half, tex_im1half_jp1;
             highp vec2 wind, wind_ip1, wind_jp1, wind_im1, wind_jm1, wind_ip1half, wind_im1half, wind_jp1half, wind_jm1half;
             highp float u_ip1_jm1half, v_im1half_jp1;
-            highp float hght, hght_im1, hght_jm1, hght_ip1half, hght_im1half, hght_jp1half, hght_jm1half;
+            highp float hght, hght_ip1, hght_jp1, hght_im1, hght_jm1, hght_ip1half, hght_im1half, hght_jp1half, hght_jm1half;
 
             //  Arakawa C grid structure:
             //
@@ -423,12 +428,18 @@ class ShallowWaterSolver extends WebGLEntity {
 
             hght = tex.r;
             hght_ip1half = tex_ip1half.r; hght_im1half = tex_im1half.r; hght_jp1half = tex_jp1half.r; hght_jm1half = tex_jm1half.r;
-            hght_im1 = tex_im1.r; hght_jm1 = tex_jm1.r;
+            hght_ip1 = tex_ip1.r; hght_jp1 = tex_jp1.r; hght_im1 = tex_im1.r; hght_jm1 = tex_jm1.r;
 
             wind = tex.gb;
             wind_ip1half = tex_ip1half.gb; wind_im1half = tex_im1half.gb; wind_jp1half = tex_jp1half.gb; wind_jm1half = tex_jm1half.gb;
             wind_ip1 = tex_ip1.gb; wind_jp1 = tex_jp1.gb; wind_im1 = tex_im1.gb; wind_jm1 = tex_jm1.gb;
             u_ip1_jm1half = tex_ip1_jm1half.g; v_im1half_jp1 = tex_im1half_jp1.b;
+
+            // Finite differences
+            highp float dz_dx = (hght - hght_im1) / u_dx;     // Defined at u point
+            highp float dz_dy = (hght - hght_jm1) / u_dx;     // Defined at v point
+            highp float du_dx = (wind_ip1.x - wind.x) / u_dx; // Defined at scalar point
+            highp float dv_dy = (wind_jp1.y - wind.y) / u_dx; // Defined at scalar point
 
             // 2nd order advection
             highp float dz_flux_dx = wind_ip1.x * hght_ip1half / u_dx - wind.x * hght_im1half / u_dx;
@@ -440,11 +451,9 @@ class ShallowWaterSolver extends WebGLEntity {
             highp vec2 dwind_flux_dx = vec2(du_flux_dx, dv_flux_dx);
             highp vec2 dwind_flux_dy = vec2(du_flux_dy, dv_flux_dy);
 
-            highp float dz_dx = (hght - hght_im1) / u_dx;     // Defined at u point
-            highp float dz_dy = (hght - hght_jm1) / u_dx;     // Defined at v point
-            highp float du_dx = (wind_ip1.x - wind.x) / u_dx; // Defined at scalar point
-            highp float dv_dy = (wind_jp1.y - wind.y) / u_dx; // Defined at scalar point
-
+            // 2nd order diffusion
+            highp float d2z_dx2 = (hght_ip1 - 2. * hght + hght_im1) / (u_dx * u_dx);
+            highp float d2z_dy2 = (hght_jp1 - 2. * hght + hght_jm1) / (u_dx * u_dx);
             highp vec2 d2wind_dx2 = (wind_ip1 - 2. * wind + wind_im1) / (u_dx * u_dx);
             highp vec2 d2wind_dy2 = (wind_jp1 - 2. * wind + wind_jm1) / (u_dx * u_dx);
 
@@ -458,10 +467,7 @@ class ShallowWaterSolver extends WebGLEntity {
 
             highp vec3 dtex_dt = vec3(0., 0., 0.);
 
-            highp float mean_depth = 5.;
-            highp float kinematic_viscosity = 2e-2;
-
-            dtex_dt.r = -(mean_depth + hght) * (du_dx + dv_dy) - dz_flux_dx - dz_flux_dy;
+            dtex_dt.r = -(mean_depth + hght) * (du_dx + dv_dy) - dz_flux_dx - dz_flux_dy + inv_turb_prandtl * kinematic_viscosity * (d2z_dx2 + d2z_dy2);
             dtex_dt.gb = -9.806 * vec2(dz_dx, dz_dy) - dwind_flux_dx - dwind_flux_dy + kinematic_viscosity * (d2wind_dx2 + d2wind_dy2);
 
             if (u_istage == 0) {
