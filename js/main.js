@@ -17,8 +17,8 @@ window.onload = () => {
 
     const nx = canvas.width / 2;
     const ny = canvas.height / 2;
-    let initial_state = create_shallow_water_state(nx, ny, 'quiescent');
-    initial_state = {...initial_state, 'nx': nx, 'ny': ny, 'dx': 0.1};
+    let initial_state = create_shallow_water_state(nx + 1, ny + 1, 'quiescent');
+    initial_state = {...initial_state, 'nx': nx + 1, 'ny': ny + 1, 'dx': 0.2};
 
     const solver = new ShallowWaterSolver(initial_state);
     solver.setup(gl);
@@ -87,15 +87,15 @@ window.onload = () => {
             advance_and_render(dt);
         }
         else if (event.key == 'Escape') {
-            let state = create_shallow_water_state(nx, ny, 'quiescent');
-            state = {...state, 'nx': nx, 'ny': ny};
+            let state = create_shallow_water_state(nx + 1, ny + 1, 'quiescent');
+            state = {...state, 'nx': nx + 1, 'ny': ny + 1};
             solver.inject_state(gl, state, true);
         }
     }
 
     window.onclick = event => {
-        let state = create_shallow_water_state(nx, ny, 'drop', event.pageX, ny - event.pageY);
-        state = {...state, 'nx': nx, 'ny': ny};
+        let state = create_shallow_water_state(nx + 1, ny + 1, 'drop', event.pageX, ny - event.pageY);
+        state = {...state, 'nx': nx + 1, 'ny': ny + 1};
         solver.inject_state(gl, state);
         instructions.style.display = 'none';
     }
@@ -361,60 +361,105 @@ class ShallowWaterSolver extends WebGLEntity {
             highp vec2 ihat = vec2(u_unit.x, 0.);
             highp vec2 jhat = vec2(0., u_unit.y);
 
-            highp vec3 tex, tex_ip1, tex_im1, tex_jp1, tex_jm1;
-            highp vec2 wind, wind_ip1, wind_im1, wind_jp1, wind_jm1;
-            highp float hght, hght_ip1, hght_im1, hght_jp1, hght_jm1;
+            highp vec3 tex, tex_ip1, tex_jp1, tex_im1, tex_jm1, tex_ip1half, tex_im1half, tex_jp1half, tex_jm1half, tex_ip1_jm1half, tex_im1half_jp1;
+            highp vec2 wind, wind_ip1, wind_jp1, wind_ip1half, wind_im1half, wind_jp1half, wind_jm1half;
+            highp float u_ip1_jm1half, v_im1half_jp1;
+            highp float hght, hght_im1, hght_jm1, hght_ip1half, hght_im1half, hght_jp1half, hght_jm1half;
+
+            //  Arakawa C grid structure:
+            //
+            //    v_j+1 |    v
+            //          |
+            //  z_j u_j u    z    u
+            //          |
+            //      v_j *----v-----
+            //         u_i  z_i   u_i+1
+            //              v_i 
+            //
+            // u_i+1/2,j and v_i,j+1/2 are the velocity components defined at scalar points
+            // u_i,j-1/2, u_i+1,j-1/2, v_i-1/2,j and v_i+1/2,j are needed for v momentum advection by u wind
+            // v_i-1/2,j, v_i-1/2,j+1, u_i,j-1/2 and u_i,j+1/2 are needed for u momentum advection by v wind
+            // z_i-1/2,j z_i+1/2,j, z_i,j-1/2, and z_i,j+1/2 are the scalars defined at the velocity points
 
             if (u_istage == 0) {
                 tex = texture2D(u_stage0_sampler, v_tex_coord).rgb;
+                tex_ip1half = texture2D(u_stage0_sampler, v_tex_coord + 0.5 * ihat).rgb;
+                tex_im1half = texture2D(u_stage0_sampler, v_tex_coord - 0.5 * ihat).rgb;
+                tex_jp1half = texture2D(u_stage0_sampler, v_tex_coord + 0.5 * jhat).rgb;
+                tex_jm1half = texture2D(u_stage0_sampler, v_tex_coord - 0.5 * jhat).rgb;
+                tex_ip1_jm1half = texture2D(u_stage0_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
+                tex_im1half_jp1 = texture2D(u_stage0_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
                 tex_ip1 = texture2D(u_stage0_sampler, v_tex_coord + ihat).rgb;
-                tex_im1 = texture2D(u_stage0_sampler, v_tex_coord - ihat).rgb;
                 tex_jp1 = texture2D(u_stage0_sampler, v_tex_coord + jhat).rgb;
+                tex_im1 = texture2D(u_stage0_sampler, v_tex_coord - ihat).rgb;
                 tex_jm1 = texture2D(u_stage0_sampler, v_tex_coord - jhat).rgb;
             }
             else if (u_istage == 1) {
                 tex = texture2D(u_stage1_sampler, v_tex_coord).rgb;
+                tex_ip1half = texture2D(u_stage1_sampler, v_tex_coord + 0.5 * ihat).rgb;
+                tex_im1half = texture2D(u_stage1_sampler, v_tex_coord - 0.5 * ihat).rgb;
+                tex_jp1half = texture2D(u_stage1_sampler, v_tex_coord + 0.5 * jhat).rgb;
+                tex_jm1half = texture2D(u_stage1_sampler, v_tex_coord - 0.5 * jhat).rgb;
+                tex_ip1_jm1half = texture2D(u_stage1_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
+                tex_im1half_jp1 = texture2D(u_stage1_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
                 tex_ip1 = texture2D(u_stage1_sampler, v_tex_coord + ihat).rgb;
-                tex_im1 = texture2D(u_stage1_sampler, v_tex_coord - ihat).rgb;
                 tex_jp1 = texture2D(u_stage1_sampler, v_tex_coord + jhat).rgb;
+                tex_im1 = texture2D(u_stage1_sampler, v_tex_coord - ihat).rgb;
                 tex_jm1 = texture2D(u_stage1_sampler, v_tex_coord - jhat).rgb;
             }
             else if (u_istage == 2) {
+                tex = texture2D(u_stage2_sampler, v_tex_coord).rgb;
+                tex_ip1half = texture2D(u_stage2_sampler, v_tex_coord + 0.5 * ihat).rgb;
+                tex_im1half = texture2D(u_stage2_sampler, v_tex_coord - 0.5 * ihat).rgb;
+                tex_jp1half = texture2D(u_stage2_sampler, v_tex_coord + 0.5 * jhat).rgb;
+                tex_jm1half = texture2D(u_stage2_sampler, v_tex_coord - 0.5 * jhat).rgb;
+                tex_ip1_jm1half = texture2D(u_stage2_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
+                tex_im1half_jp1 = texture2D(u_stage2_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
                 tex_ip1 = texture2D(u_stage2_sampler, v_tex_coord + ihat).rgb;
-                tex_im1 = texture2D(u_stage2_sampler, v_tex_coord - ihat).rgb;
                 tex_jp1 = texture2D(u_stage2_sampler, v_tex_coord + jhat).rgb;
+                tex_im1 = texture2D(u_stage2_sampler, v_tex_coord - ihat).rgb;
                 tex_jm1 = texture2D(u_stage2_sampler, v_tex_coord - jhat).rgb;
             }
 
             hght = tex.r;
-            hght_ip1 = tex_ip1.r; hght_im1 = tex_im1.r; hght_jp1 = tex_jp1.r; hght_jm1 = tex_jm1.r;
+            hght_ip1half = tex_ip1half.r; hght_im1half = tex_im1half.r; hght_jp1half = tex_jp1half.r; hght_jm1half = tex_jm1half.r;
+            hght_im1 = tex_im1.r; hght_jm1 = tex_jm1.r;
 
             wind = tex.gb;
-            wind_ip1 = tex_ip1.gb; wind_im1 = tex_im1.gb; wind_jp1 = tex_jp1.gb; wind_jm1 = tex_jm1.gb;
+            wind_ip1half = tex_ip1half.gb; wind_im1half = tex_im1half.gb; wind_jp1half = tex_jp1half.gb; wind_jm1half = tex_jm1half.gb;
+            wind_ip1 = tex_ip1.gb; wind_jp1 = tex_jp1.gb;
+            u_ip1_jm1half = tex_ip1_jm1half.g; v_im1half_jp1 = tex_im1half_jp1.b;
 
-            highp float dz_dx = (hght_ip1 - hght_im1) / (2. * u_dx);
-            highp float dz_dy = (hght_jp1 - hght_jm1) / (2. * u_dx);
+            // 2nd order advection
+            highp float dz_flux_dx = wind_ip1.x * hght_ip1half / u_dx - wind.x * hght_im1half / u_dx;
+            highp float dz_flux_dy = wind_jp1.y * hght_jp1half / u_dx - wind.y * hght_jm1half / u_dx;
+            highp float du_flux_dx = wind_ip1half.x * wind_ip1half.x / u_dx - wind_im1half.x * wind_im1half.x / u_dx;
+            highp float du_flux_dy = v_im1half_jp1 * wind_jp1half.x / u_dx - wind_im1half.y * wind_jm1half.x / u_dx;
+            highp float dv_flux_dx = u_ip1_jm1half * wind_ip1half.y / u_dx - wind_jm1half.x * wind_jm1half.y / u_dx;
+            highp float dv_flux_dy = wind_jp1half.y * wind_jp1half.y / u_dx - wind_jm1half.y * wind_jm1half.y / u_dx;
+            highp vec2 dwind_flux_dx = vec2(du_flux_dx, dv_flux_dx);
+            highp vec2 dwind_flux_dy = vec2(du_flux_dy, dv_flux_dy);
 
-            highp vec2 dwind_dx = (wind_ip1 - wind_im1) / (2. * u_dx);
-            highp vec2 dwind_dy = (wind_jp1 - wind_jm1) / (2. * u_dx);
-            highp vec2 d2wind_dx2 = (wind_ip1 - 2. * wind + wind_im1) / (4. * u_dx * u_dx);
-            highp vec2 d2wind_dy2 = (wind_jp1 - 2. * wind + wind_jm1) / (4. * u_dx * u_dx);
+            highp float dz_dx = (hght - hght_im1) / u_dx;     // Defined at u point
+            highp float dz_dy = (hght - hght_jm1) / u_dx;     // Defined at v point
+            highp float du_dx = (wind_ip1.x - wind.x) / u_dx; // Defined at scalar point
+            highp float dv_dy = (wind_jp1.y - wind.y) / u_dx; // Defined at scalar point
 
             // Apply Neumann BC for height
-            if (v_tex_coord.x - ihat.x < 0. || v_tex_coord.x + ihat.x > 1.) {
-                dz_dx = 0.;
+            if (v_tex_coord.x - ihat.x < 0. || v_tex_coord.x + 2. * ihat.x > 1.) {
+                dz_flux_dx = 0.;
             }
-            if (v_tex_coord.y - jhat.y < 0. || v_tex_coord.y + jhat.y > 1.) {
-                dz_dy = 0.;
+            if (v_tex_coord.y - jhat.y < 0. || v_tex_coord.y + 2. * jhat.y > 1.) {
+                dz_flux_dy = 0.;
             }
 
             highp vec3 dtex_dt = vec3(0., 0., 0.);
 
-            highp float mean_depth = 2.;
+            highp float mean_depth = 5.;
             highp float kinematic_viscosity = 5e-2;
 
-            dtex_dt.r = -((mean_depth + hght) * dwind_dx.x + wind.x * dz_dx + (mean_depth + hght) * dwind_dy.y + wind.y * dz_dy);
-            dtex_dt.gb = -9.806 * vec2(dz_dx, dz_dy) - wind.x * dwind_dx - wind.y * dwind_dy + kinematic_viscosity * (d2wind_dx2 + d2wind_dy2);
+            dtex_dt.r = -(mean_depth + hght) * (du_dx + dv_dy) - dz_flux_dx - dz_flux_dy;
+            dtex_dt.gb = -9.806 * vec2(dz_dx, dz_dy) - dwind_flux_dx - dwind_flux_dy; // + kinematic_viscosity * (d2wind_dx2 + d2wind_dy2);
 
             if (u_istage == 0) {
                 highp vec3 out_tex = tex + u_dt / 3. * dtex_dt;
@@ -573,7 +618,7 @@ class ShallowWaterSolver extends WebGLEntity {
         this._bindVertices(gl, this.vertices);
         this._bindVertices(gl, this.texcoords);
 
-        gl.uniform2f(this.u_unit, 1 / this.state['nx'], 1 / this.state['ny']);
+        gl.uniform2f(this.u_unit, 1 / (this.state['nx'] - 1), 1 / (this.state['ny'] - 1));
         gl.uniform1f(this.u_dx, this.state['dx']);
         gl.uniform1f(this.u_dt, dt);
 
