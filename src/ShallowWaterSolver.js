@@ -189,6 +189,8 @@ class ShallowWaterSolver extends WebGLEntity {
             'texture': this.stages[0]['texture']['texture'],
         };
 
+        this.inject_state(gl, this.state);
+
         this.is_initialized = true;
     }
 
