@@ -359,8 +359,8 @@ class ShallowWaterSolver extends WebGLEntity {
 
         // Constants
         highp float mean_depth = 5.;
-        highp float kinematic_viscosity = 1e-2;
-        highp float inv_turb_prandtl = 3.;
+        highp float kinematic_viscosity = 1e-2; // 2.7e-1 for weird behavior
+        highp float inv_turb_prandtl = 3.;      // 0. to turn off height diffusion
 
         void main() {
             highp vec2 ihat = vec2(u_unit.x, 0.);
