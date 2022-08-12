@@ -6,10 +6,11 @@ import ShallowWaterSolver from "./ShallowWaterSolver.js";
 import "./ShallowWaterViewer.css";
 
 function create_shallow_water_state() {
-    const nx = arguments[0];
-    const ny = arguments[1];
-    const method = arguments[2] === undefined ? 'random' : arguments[2];
-    const method_args = [...arguments].slice(3);
+    const grid = arguments[0];
+    const method = arguments[1] === undefined ? 'random' : arguments[1];
+    const method_args = [...arguments].slice(2);
+
+    const nx = grid['nx'], ny = grid['ny'];
 
     const initial_z = new Float32Array(nx * ny);
     const initial_u = new Float32Array(nx * ny);
@@ -103,14 +104,15 @@ function ShallowWaterViewer(props) {
     
         const nx = canvas.current.width / 2;
         const ny = canvas.current.height / 2;
-        let initial_state = create_shallow_water_state(nx, ny, 'quiescent');
-        initial_state = {...initial_state, 'nx': nx, 'ny': ny, 'dx': 0.1};
-    
-        const solver = new ShallowWaterSolver(initial_state);
+        const grid = {'nx': nx, 'ny': ny, 'dx': 0.1};
+
+        const initial_state = create_shallow_water_state(grid, 'quiescent');
+        const solver = new ShallowWaterSolver(grid, initial_state);
+
         solver.setup(gl);
         solver.render(gl);
+
         let last_timestep = null;
-    
         let is_animating = true;
         let dt = 1/105;
         let fps = null;
@@ -148,7 +150,7 @@ function ShallowWaterViewer(props) {
             }
     
             props.onfpschange(readout_str);
-            
+
             last_timestep = timestep;
             raf.current = window.requestAnimationFrame(do_animation);
         }
@@ -172,15 +174,13 @@ function ShallowWaterViewer(props) {
                 advance_and_render(dt);
             }
             else if (event.key == 'Escape') {
-                let state = create_shallow_water_state(nx, ny, 'quiescent');
-                state = {...state, 'nx': nx, 'ny': ny};
+                const state = create_shallow_water_state(grid, 'quiescent');
                 solver.inject_state(gl, state, true);
             }
         }
     
         window.onclick = event => {
-            let state = create_shallow_water_state(nx, ny, 'drop', event.pageX, ny - event.pageY);
-            state = {...state, 'nx': nx, 'ny': ny};
+            const state = create_shallow_water_state(grid, 'drop', event.pageX, ny - event.pageY);
             solver.inject_state(gl, state);
             props.onshowhideinstructions(false);
         }

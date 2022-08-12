@@ -2,9 +2,10 @@
 import WebGLEntity from "./WebGLEntity.js";
 
 class ShallowWaterSolver extends WebGLEntity {
-    constructor(initial_state) {
+    constructor(grid, initial_state) {
         super();
 
+        this.grid = grid;
         this.state = initial_state;
 
         this.is_initialized = false;
@@ -161,7 +162,7 @@ class ShallowWaterSolver extends WebGLEntity {
 
         const state_img = {
             'format': gl.RGBA, 'type': gl.FLOAT, 
-            'width': this.state['nx'], 'height': this.state['ny'], 'image': null,
+            'width': this.grid['nx'], 'height': this.grid['ny'], 'image': null,
             'mag_filter': gl.LINEAR
         }
 
@@ -194,12 +195,8 @@ class ShallowWaterSolver extends WebGLEntity {
     inject_state(gl, state, clear_state) {
         clear_state = clear_state === undefined ? false : clear_state;
 
-        if (state['nx'] != this.state['nx'] || state['ny'] != this.state['ny']) {
-            throw `State dimension mismatch. Expected (${this.state['nx']}, ${this.state['ny']}), received (${state['nx']}, ${state['hy']})`;
-        }
-
-        if (state['z'].length != state['nx'] * state['ny']) {
-            throw `State dimensions (${state['nx']}, ${state['ny']}) and data length ${state['z'].length} do not match`;
+        if (state['z'].length != this.grid['nx'] * this.grid['ny']) {
+            throw `Grid dimensions (${this.grid['nx']}, ${this.grid['ny']}) and data length ${state['z'].length} do not match`;
         }
         
         // Set up texture for new state
@@ -213,7 +210,7 @@ class ShallowWaterSolver extends WebGLEntity {
 
         const state_img = {
             'format': gl.RGBA, 'type': gl.FLOAT, 
-            'width': this.state['nx'], 'height': this.state['ny'], 'image': img_data,
+            'width': this.grid['nx'], 'height': this.grid['ny'], 'image': img_data,
             'mag_filter': gl.LINEAR
         }
 
@@ -230,7 +227,7 @@ class ShallowWaterSolver extends WebGLEntity {
         }
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.inject_framebuffer);
-        gl.viewport(0, 0, this.state['nx'], this.state['ny']);
+        gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
 
         this._bindVertices(gl, this.inject_vertices);
         this._bindTexture(gl, 0, texture);
@@ -240,7 +237,7 @@ class ShallowWaterSolver extends WebGLEntity {
         
         // Now copy the injection framebuffer back into the main state
         this._bindTexture(gl, 0, this.inject_state_texture);
-        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.state['nx'], this.state['ny'], 0);
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
 
         // Delete injected state texture
         gl.deleteTexture(texture['texture']);
@@ -251,13 +248,13 @@ class ShallowWaterSolver extends WebGLEntity {
         if (!this.is_initialized) return;
 
         gl.useProgram(this.program);
-        gl.viewport(0, 0, this.state['nx'], this.state['ny']);
+        gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
 
         this._bindVertices(gl, this.vertices);
         this._bindVertices(gl, this.texcoords);
 
-        gl.uniform2f(this.u_unit, 1 / this.state['nx'], 1 / this.state['ny']);
-        gl.uniform1f(this.u_dx, this.state['dx']);
+        gl.uniform2f(this.u_unit, 1 / this.grid['nx'], 1 / this.grid['ny']);
+        gl.uniform1f(this.u_dx, this.grid['dx']);
         gl.uniform1f(this.u_dt, dt);
 
         // Clear all intermediate buffers
@@ -286,7 +283,7 @@ class ShallowWaterSolver extends WebGLEntity {
 
         // Copy post state back to main state framebuffer
         this._bindTexture(gl, 0, this.stages[0]['texture']);
-        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.state['nx'], this.state['ny'], 0);
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
 
     }
 
@@ -294,7 +291,7 @@ class ShallowWaterSolver extends WebGLEntity {
         if (!this.is_initialized) return;
 
         gl.useProgram(this.render_program);
-        gl.viewport(0, 0, this.state['nx'] * 2, this.state['ny'] * 2);
+        gl.viewport(0, 0, this.grid['nx'] * 2, this.grid['ny'] * 2);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         this._bindVertices(gl, this.render_vertices);
