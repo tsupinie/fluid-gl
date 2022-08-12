@@ -1,0 +1,38 @@
+body {
+    font-family: "Trebuchet MS";
+    background-color: black;
+}
+
+div#readout {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    color: #ffffff;
+    cursor: default;
+}
+
+div#instructions {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 2.5em;
+    color: #ffffff;
+    cursor: default;
+}
+
+span.key {
+    border: 1px solid white;
+    background-color: #ffffff33;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    border-radius: 0.2em;
+}
+
+span.spacer {
+    display: inline-block;
+    width: 6em;
+    height: 1.5em;
+}
