@@ -86,11 +86,9 @@ function create_shallow_water_state() {
 
 function ShallowWaterViewer(props) {
     const canvas = React.createRef();
-
-    let [is_animating, set_is_animating] = useState(true);
+    const raf = React.createRef();
 
     useEffect(() => {
-        console.log('useEffect');
         const canvas_rect = canvas.current.getBoundingClientRect();
 
         canvas.current.width = canvas_rect.width * 2;
@@ -113,6 +111,7 @@ function ShallowWaterViewer(props) {
         solver.render(gl);
         let last_timestep = null;
     
+        let is_animating = true;
         let dt = 1/105;
         let fps = null;
         let n_frames = 0;
@@ -139,7 +138,7 @@ function ShallowWaterViewer(props) {
                     fps += fps_first_frame == 0 ? (fps_this_frame - fps) / n_frames : (fps_this_frame - fps_first_frame) / n_frames;
                 }
     
-                readout_str = `${Math.round(fps * 100) / 100} FPS (${Math.round(fps * dt * 10) / 10} &times; realtime)`;
+                readout_str = `${Math.round(fps * 100) / 100} FPS (${Math.round(fps * dt * 10) / 10} × realtime)`;
             }
     
             advance_and_render(dt);
@@ -149,27 +148,25 @@ function ShallowWaterViewer(props) {
             }
     
             props.onfpschange(readout_str);
-    
-            if (is_animating) {
-                last_timestep = timestep;
-                window.requestAnimationFrame(do_animation);
-            }
+            
+            last_timestep = timestep;
+            raf.current = window.requestAnimationFrame(do_animation);
         }
     
-        window.requestAnimationFrame(do_animation);
+        raf.current = window.requestAnimationFrame(do_animation);
     
         window.onkeydown = event => {
             if (event.key == ' ') {
-                const start_animating = !is_animating;
-                if (start_animating) {
+                is_animating = !is_animating;
+                if (is_animating) {
                     console.log('Animation Start');
-                    window.requestAnimationFrame(do_animation);
+                    raf.current = window.requestAnimationFrame(do_animation);
                 }
                 else {
                     console.log('Animation Stop');
+                    window.cancelAnimationFrame(raf.current);
                     last_timestep = null;
                 }
-                set_is_animating(false);
             }
             else if (event.key == 'ArrowRight') {
                 advance_and_render(dt);
@@ -192,6 +189,8 @@ function ShallowWaterViewer(props) {
             mouse_x = event.pageX;
             mouse_y = event.pageY;
         }
+
+        return () => window.cancelAnimationFrame(raf.current);
     }, []);
 
     return (<canvas id="main" ref={canvas}></canvas>);
