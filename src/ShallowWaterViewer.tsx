@@ -22,31 +22,31 @@ function create_shallow_water_state(grid: GridType, method?: ICMethod, ...method
     const initial_u = new Float32Array(nx * ny);
     const initial_v = new Float32Array(nx * ny);
 
-    const random_ics = () => {
-        return (i: number, j: number, idx: number) => {
+    const random_ics = () : Function => {
+        return (i: number, j: number, idx: number) : void => {
             initial_z[idx] = Math.random();
             initial_u[idx] = Math.random();
             initial_v[idx] = Math.random();
         }
     }
 
-    const quiescent = () => {
-        return (i: number, j: number, idx: number) => {}
+    const quiescent = () : Function => {
+        return (i: number, j: number, idx: number) : void => {}
     }
 
-    const bump = (...args: number[]) => {
+    const bump = (...args: number[]) : Function => {
         const center_x = args[0] === undefined ? nx / 4 : args[0];
         const center_y = args[1] === undefined ? nx / 3 : args[1];
         const filter_width = args[2] === undefined ? nx / 64 : args[2];
 
-        return (i: number, j: number, idx: number) => {
+        return (i: number, j: number, idx: number) : void => {
             const x_term = (i - center_x) / filter_width;
             const y_term = (j - center_y) / filter_width;
             initial_z[idx] = 2 * Math.exp(-(x_term * x_term) - (y_term * y_term));
         }
     }
 
-    const drop = (...args: number[]) => {
+    const drop = (...args: number[]) : Function => {
         const center_x = args[0] === undefined ? nx / 4 : args[0];
         const center_y = args[1] === undefined ? ny / 3 : args[1];
         const filter_width = args[2] === undefined ? nx / 64 : args[2];
@@ -57,7 +57,7 @@ function create_shallow_water_state(grid: GridType, method?: ICMethod, ...method
         const o_filter_width = 1 / filter_width;
         const cutoff = filter_width * 4;
 
-        return (i: number, j: number, idx: number) => {
+        return (i: number, j: number, idx: number) : void => {
             if (Math.abs(i - center_x) < cutoff && Math.abs(j - center_y) < cutoff) {
                 const x_term = (i - center_x) * o_filter_width;
                 const y_term = (j - center_y) * o_filter_width;
