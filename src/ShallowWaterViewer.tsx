@@ -6,10 +6,8 @@ import * as React from "react";
 import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
 
-function create_shallow_water_state(...args): ShallowWaterStateType {
-    const grid = args[0];
-    const method = args[1] === undefined ? 'random' : args[1];
-    const method_args = [...args].slice(2);
+function create_shallow_water_state(grid: GridType, method?: string, ...method_args: any[]): ShallowWaterStateType {
+    method = method === undefined ? 'random' : method;
 
     const nx = grid['nx'], ny = grid['ny'];
 
@@ -29,10 +27,10 @@ function create_shallow_water_state(...args): ShallowWaterStateType {
         return (i: number, j: number, idx: number) => {}
     }
 
-    const bump = (center_x: number, center_y: number, filter_width: number) => {
-        center_x = center_x === undefined ? nx / 4 : center_x;
-        center_x = center_y === undefined ? nx / 3 : center_y;
-        filter_width = filter_width === undefined ? nx / 64 : filter_width;
+    const bump = (...args: number[]) => {
+        const center_x = args[0] === undefined ? nx / 4 : args[0];
+        const center_y = args[1] === undefined ? nx / 3 : args[1];
+        const filter_width = args[2] === undefined ? nx / 64 : args[2];
 
         return (i: number, j: number, idx: number) => {
             const x_term = (i - center_x) / filter_width;
@@ -41,12 +39,12 @@ function create_shallow_water_state(...args): ShallowWaterStateType {
         }
     }
 
-    const drop = (center_x: number, center_y: number, filter_width: number, amplitude: number, shape: number) => {
-        center_x = center_x === undefined ? nx / 4 : center_x;
-        center_y = center_y === undefined ? ny / 3 : center_y;
-        filter_width = filter_width === undefined ? nx / 64 : filter_width;
-        amplitude = amplitude === undefined ? 1 : amplitude;
-        shape = shape === undefined ? 10 : shape;
+    const drop = (...args: number[]) => {
+        const center_x = args[0] === undefined ? nx / 4 : args[0];
+        const center_y = args[1] === undefined ? ny / 3 : args[1];
+        const filter_width = args[2] === undefined ? nx / 64 : args[2];
+        const amplitude = args[3] === undefined ? 1 : args[3];
+        const shape = args[4] === undefined ? 10 : args[4];
 
         const shape_fac = (shape + amplitude) / shape;
         const o_filter_width = 1 / filter_width;
@@ -121,12 +119,12 @@ function ShallowWaterViewer(props) {
         const n_frames_mean = 600;
         let fps_list = [];
     
-        const advance_and_render = dt => {
+        const advance_and_render = (dt: number) => {
             solver.advance(gl, dt);
             solver.render(gl);
         }
     
-        const do_animation = timestep => {
+        const do_animation = (timestep: number) => {
             n_frames++;
             let readout_str = "";
             if (last_timestep !== null) {
@@ -158,7 +156,7 @@ function ShallowWaterViewer(props) {
     
         raf.current = window.requestAnimationFrame(do_animation);
     
-        window.onkeydown = event => {
+        window.onkeydown = (event: KeyboardEvent) => {
             if (event.key == ' ') {
                 is_animating = !is_animating;
                 if (is_animating) {
@@ -180,13 +178,13 @@ function ShallowWaterViewer(props) {
             }
         }
     
-        window.onclick = event => {
+        window.onclick = (event: MouseEvent) => {
             const state = create_shallow_water_state(grid, 'drop', event.pageX, ny - event.pageY);
             solver.inject_state(gl, state);
             props.onshowhideinstructions(false);
         }
     
-        window.onmousemove = event => {
+        window.onmousemove = (event: MouseEvent) => {
             mouse_x = event.pageX;
             mouse_y = event.pageY;
         }
