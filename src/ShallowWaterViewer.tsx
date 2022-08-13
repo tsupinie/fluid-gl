@@ -6,8 +6,15 @@ import * as React from "react";
 import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
 
-function create_shallow_water_state(grid: GridType, method?: string, ...method_args: any[]): ShallowWaterStateType {
-    method = method === undefined ? 'random' : method;
+enum ICMethod {
+    'random',
+    'quiescent',
+    'bump',
+    'drop'
+}
+
+function create_shallow_water_state(grid: GridType, method?: ICMethod, ...method_args: any[]): ShallowWaterStateType {
+    method = method === undefined ? ICMethod.random : method;
 
     const nx = grid['nx'], ny = grid['ny'];
 
@@ -60,16 +67,24 @@ function create_shallow_water_state(grid: GridType, method?: string, ...method_a
             }
         }
     }
-
-    const gen = {
-        'random': random_ics,
-        'quiescent': quiescent,
-        'bump': bump,
-        'drop': drop,
-    }[method];
-
-    if (gen === undefined) {
-        throw `Unknown generation method '${method}'`;
+    
+    let gen : Function;
+    
+    switch (method) {
+        case ICMethod.random:
+            gen = random_ics;
+            break;
+        case ICMethod.quiescent:
+            gen = quiescent;
+            break;
+        case ICMethod.bump:
+            gen = bump;
+            break;
+        case ICMethod.drop:
+            gen = drop;
+            break;
+        default:
+            throw `Unknown generation method '${method}'`;
     }
 
     const gen_meth = gen(...method_args);
@@ -105,7 +120,7 @@ function ShallowWaterViewer(props) {
         const ny = canvas.current.height / 2;
         const grid = {'nx': nx + 1, 'ny': ny + 1, 'dx': 0.09};
 
-        const initial_state = create_shallow_water_state(grid, 'quiescent');
+        const initial_state = create_shallow_water_state(grid, ICMethod.quiescent);
         const solver = new ShallowWaterSolver(grid, initial_state);
 
         solver.setup(gl);
@@ -173,13 +188,13 @@ function ShallowWaterViewer(props) {
                 advance_and_render(dt);
             }
             else if (event.key == 'Escape') {
-                const state = create_shallow_water_state(grid, 'quiescent');
+                const state = create_shallow_water_state(grid, ICMethod.quiescent);
                 solver.inject_state(gl, state, true);
             }
         }
     
         window.onclick = (event: MouseEvent) => {
-            const state = create_shallow_water_state(grid, 'drop', event.pageX, ny - event.pageY);
+            const state = create_shallow_water_state(grid, ICMethod.drop, event.pageX, ny - event.pageY);
             solver.inject_state(gl, state);
             props.onshowhideinstructions(false);
         }
