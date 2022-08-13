@@ -8,7 +8,7 @@ function ShallowWaterApp() {
     let [instructions_visible, set_instructions_visible] = useState(true);
 
 
-    let instructions = "";
+    let instructions = <div></div>;
     if (instructions_visible) {
         instructions = <div id="instructions">Click to throw a rock into the water as many times as you like
                             <br/><span className="key">SPACE</span> Pause/unpause<span className="spacer"></span><span className="key">ESC</span> Reset

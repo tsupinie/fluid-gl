@@ -1,6 +1,29 @@
 
+interface VerticesType {
+    attributes: {
+        [key: string]: number;
+    };
+    uniforms: {
+        [key: string]: WebGLUniformLocation;
+    };
+    vertices: WebGLBuffer;
+    dtype: number;
+    n_verts_per_entry: number;
+}
+
+interface TexCoordsType {
+    attributes: {
+        [key: string]: number;
+    }
+    uniforms: {
+        [key: string]: WebGLUniformLocation;
+    }
+    texture: WebGLTexture;
+    tex_coord?: WebGLBuffer;
+}
+
 class WebGLEntity {
-    _compileAndLinkShaders(gl, vertex_shader_src, frag_shader_src) {
+    _compileAndLinkShaders(gl: WebGLRenderingContext, vertex_shader_src: string, frag_shader_src: string): WebGLProgram {
         // create a vertex shader
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(vertexShader, vertex_shader_src);
@@ -41,30 +64,36 @@ class WebGLEntity {
         return program;
     }
 
-    _setupVertices(gl, program, verts, nverts_per_entry, a_vert_name) {
-        let ret = {'attributes': {}, 'uniforms': {}};
-
+    _setupVertices(gl: WebGLRenderingContext, program: WebGLProgram, verts: Float32Array, nverts_per_entry: number, a_vert_name: string): VerticesType {
         const DTYPES = {
             'Float32Array': gl.FLOAT,
             'Uint8Array': gl.UNSIGNED_BYTE,
         }
 
-        ret['dtype'] = DTYPES[verts.constructor.name];
-        ret['nverts_per_entry'] = nverts_per_entry;
+        let ret = {
+            'attributes': {}, 
+            'uniforms': {},
+            'dtype': DTYPES[verts.constructor.name],
+            'n_verts_per_entry': nverts_per_entry,
+            'vertices': gl.createBuffer()
+        };
 
         ret['attributes'][a_vert_name] = gl.getAttribLocation(program, a_vert_name);
 
-        ret['vertices'] = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, ret['vertices']);
         gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
 
         return ret;
     }
 
-    _setupTexture(gl, image, program, u_sampler_name, tex_coords, a_tex_coord_name) {
-        let ret = {'attributes': {}, 'uniforms': {}};
+    _setupTexture(gl: WebGLRenderingContext, image: object, program?: WebGLProgram, u_sampler_name?: string, tex_coords?: 
+        Float32Array, a_tex_coord_name?: string) : TexCoordsType {
+        let ret = {
+            'attributes': {}, 
+            'uniforms': {},
+            'texture': gl.createTexture()
+        };
 
-        ret['texture'] = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, ret['texture']);
 
         if ('width' in image && 'height' in image) {
@@ -93,15 +122,15 @@ class WebGLEntity {
         return ret;
     }
 
-    _bindVertices(gl, vertices) {
+    _bindVertices(gl: WebGLRenderingContext, vertices: VerticesType) : void {
         gl.bindBuffer(gl.ARRAY_BUFFER, vertices['vertices']);
         Object.values(vertices['attributes']).forEach(attr => {
             gl.enableVertexAttribArray(attr);
-            gl.vertexAttribPointer(attr, vertices['nverts_per_entry'], vertices['dtype'], false, 0, 0);
+            gl.vertexAttribPointer(attr, vertices['n_verts_per_entry'], vertices['dtype'], false, 0, 0);
         });
     }
 
-    _bindTexture(gl, gl_tex_num, texture, bind_texcoords) {
+    _bindTexture(gl: WebGLRenderingContext, gl_tex_num: number, texture: TexCoordsType, bind_texcoords?: boolean) : void {
         bind_texcoords = bind_texcoords === undefined ? true : bind_texcoords;
         if ('tex_coord' in texture && bind_texcoords) {
             gl.bindBuffer(gl.ARRAY_BUFFER, texture['tex_coord']);
@@ -119,4 +148,4 @@ class WebGLEntity {
     }
 }
 
-export default WebGLEntity;
+export {WebGLEntity, VerticesType, TexCoordsType};

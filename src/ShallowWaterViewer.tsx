@@ -1,14 +1,15 @@
 
 
-import React, { useEffect, useState } from "react";
+import { useEffect } from "react";
+import * as React from "react";
 
-import ShallowWaterSolver from "./ShallowWaterSolver.js";
+import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
 
-function create_shallow_water_state() {
-    const grid = arguments[0];
-    const method = arguments[1] === undefined ? 'random' : arguments[1];
-    const method_args = [...arguments].slice(2);
+function create_shallow_water_state(...args): ShallowWaterStateType {
+    const grid = args[0];
+    const method = args[1] === undefined ? 'random' : args[1];
+    const method_args = [...args].slice(2);
 
     const nx = grid['nx'], ny = grid['ny'];
 
@@ -17,7 +18,7 @@ function create_shallow_water_state() {
     const initial_v = new Float32Array(nx * ny);
 
     const random_ics = () => {
-        return (i, j, idx) => {
+        return (i: number, j: number, idx: number) => {
             initial_z[idx] = Math.random();
             initial_u[idx] = Math.random();
             initial_v[idx] = Math.random();
@@ -25,22 +26,22 @@ function create_shallow_water_state() {
     }
 
     const quiescent = () => {
-        return (i, j, idx) => {}
+        return (i: number, j: number, idx: number) => {}
     }
 
-    const bump = (center_x, center_y, filter_width) => {
+    const bump = (center_x: number, center_y: number, filter_width: number) => {
         center_x = center_x === undefined ? nx / 4 : center_x;
         center_x = center_y === undefined ? nx / 3 : center_y;
         filter_width = filter_width === undefined ? nx / 64 : filter_width;
 
-        return (i, j, idx) => {
+        return (i: number, j: number, idx: number) => {
             const x_term = (i - center_x) / filter_width;
             const y_term = (j - center_y) / filter_width;
             initial_z[idx] = 2 * Math.exp(-(x_term * x_term) - (y_term * y_term));
         }
     }
 
-    const drop = (center_x, center_y, filter_width, amplitude, shape) => {
+    const drop = (center_x: number, center_y: number, filter_width: number, amplitude: number, shape: number) => {
         center_x = center_x === undefined ? nx / 4 : center_x;
         center_y = center_y === undefined ? ny / 3 : center_y;
         filter_width = filter_width === undefined ? nx / 64 : filter_width;
@@ -51,7 +52,7 @@ function create_shallow_water_state() {
         const o_filter_width = 1 / filter_width;
         const cutoff = filter_width * 4;
 
-        return (i, j, idx) => {
+        return (i: number, j: number, idx: number) => {
             if (Math.abs(i - center_x) < cutoff && Math.abs(j - center_y) < cutoff) {
                 const x_term = (i - center_x) * o_filter_width;
                 const y_term = (j - center_y) * o_filter_width;
@@ -86,8 +87,8 @@ function create_shallow_water_state() {
 }
 
 function ShallowWaterViewer(props) {
-    const canvas = React.createRef();
-    const raf = React.createRef();
+    const canvas: React.RefObject<HTMLCanvasElement> = React.createRef();
+    const raf: React.MutableRefObject<number> = React.createRef();
 
     useEffect(() => {
         const canvas_rect = canvas.current.getBoundingClientRect();
