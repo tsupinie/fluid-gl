@@ -43,6 +43,7 @@ class ShallowWaterSolver extends WebGLEntity {
     render_texcoords: VerticesType;
 
     render_u_sampler: WebGLUniformLocation;
+    render_u_unit: WebGLUniformLocation;
     u_unit: WebGLUniformLocation;
     u_dx: WebGLUniformLocation;
     u_dt: WebGLUniformLocation;
@@ -80,6 +81,7 @@ class ShallowWaterSolver extends WebGLEntity {
         this.render_texcoords = this._setupVertices(gl, this.render_program, this.tex_coords, 2, 'a_tex_coord');
 
         this.render_u_sampler = gl.getUniformLocation(this.render_program, 'u_sampler');
+        this.render_u_unit = gl.getUniformLocation(this.render_program, 'u_unit');
 
         // Set up model state textures and framebuffers
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
@@ -220,13 +222,14 @@ class ShallowWaterSolver extends WebGLEntity {
         if (!this.is_initialized) return;
 
         gl.useProgram(this.render_program);
-        gl.viewport(0, 0, this.grid['nx'] * 2, this.grid['ny'] * 2);
+        gl.viewport(0, 0, (this.grid['nx'] - 1) * 2, (this.grid['ny'] - 1) * 2);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         this._bindVertices(gl, this.render_vertices);
         this._bindVertices(gl, this.render_texcoords);
         this._bindTexture(gl, 0, this.stages[0]['texture'], false);
         gl.uniform1i(this.render_u_sampler, 0);
+        gl.uniform2f(this.render_u_unit, 1 / this.grid['nx'], 1 / this.grid['ny']);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
