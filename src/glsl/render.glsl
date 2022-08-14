@@ -12,7 +12,7 @@ void main() {
     highp float dot_pos = length(v_tex_coord - vec2(0.5, 0.5));
 
     if (dot_pos > 0.5) discard;
-    
+
     highp vec3 tex = texture2D(u_sampler, v_state_coord).rgb;
 
     highp float cmap_coord = clamp((tex.r - cmap_min) / (cmap_max - cmap_min), 0., 1.);
