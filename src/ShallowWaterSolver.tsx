@@ -183,7 +183,7 @@ class ShallowWaterSolver extends WebGLEntity {
         this._bindVertices(gl, this.vertices);
         this._bindVertices(gl, this.texcoords);
 
-        gl.uniform2f(this.u_unit, 1 / (this.grid['nx'] - 1), 1 / (this.grid['ny'] - 1));
+        gl.uniform2f(this.u_unit, 1 / this.grid['nx'], 1 / this.grid['ny']);
         gl.uniform1f(this.u_dx, this.grid['dx']);
         gl.uniform1f(this.u_dt, dt);
 
