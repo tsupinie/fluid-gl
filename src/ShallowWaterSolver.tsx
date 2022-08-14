@@ -1,5 +1,6 @@
 
 import {WebGLEntity, VerticesType, TexCoordsType} from "./WebGLEntity";
+import {seismic_colormap} from "./colormap";
 
 const vertex_shader_src = require('./glsl/vertex.glsl');
 const solver_fragment_shader_src = require('./glsl/solver.glsl');
@@ -43,6 +44,8 @@ class ShallowWaterSolver extends WebGLEntity {
     render_texcoords: VerticesType;
 
     render_u_sampler: WebGLUniformLocation;
+    render_u_unit: WebGLUniformLocation;
+    render_cmap_texture: TexCoordsType;
     u_unit: WebGLUniformLocation;
     u_dx: WebGLUniformLocation;
     u_dt: WebGLUniformLocation;
@@ -80,6 +83,9 @@ class ShallowWaterSolver extends WebGLEntity {
         this.render_texcoords = this._setupVertices(gl, this.render_program, this.tex_coords, 2, 'a_tex_coord');
 
         this.render_u_sampler = gl.getUniformLocation(this.render_program, 'u_sampler');
+
+        const cmap_image = {'format': gl.RGBA, 'type': gl.UNSIGNED_BYTE, 'image': seismic_colormap.getImage(), 'mag_filter': gl.LINEAR};
+        this.render_cmap_texture = this._setupTexture(gl, cmap_image, this.render_program, 'u_colormap_sampler');
 
         // Set up model state textures and framebuffers
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
@@ -225,8 +231,11 @@ class ShallowWaterSolver extends WebGLEntity {
 
         this._bindVertices(gl, this.render_vertices);
         this._bindVertices(gl, this.render_texcoords);
-        this._bindTexture(gl, 0, this.stages[0]['texture'], false);
-        gl.uniform1i(this.render_u_sampler, 0);
+        this._bindTexture(gl, 1, this.stages[0]['texture'], false);
+        this._bindTexture(gl, 0, this.render_cmap_texture);
+
+        gl.uniform1i(this.render_u_sampler, 1);
+        gl.uniform2f(this.render_u_unit, 1 / this.grid['nx'], 1 / this.grid['ny']);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
