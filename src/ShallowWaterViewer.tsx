@@ -5,6 +5,7 @@ import * as React from "react";
 
 import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
+import Renderer from "./Renderer";
 
 function create_shallow_water_state(...args): ShallowWaterStateType {
     const grid = args[0];
@@ -108,10 +109,10 @@ function ShallowWaterViewer(props) {
         const grid = {'nx': nx, 'ny': ny, 'dx': 0.1};
 
         const initial_state = create_shallow_water_state(grid, 'quiescent');
-        const solver = new ShallowWaterSolver(grid, initial_state);
+        const solver = new ShallowWaterSolver(gl, grid, initial_state);
+        const renderer = new Renderer(solver);
 
-        solver.setup(gl);
-        solver.render(gl);
+        renderer.render();
 
         let last_timestep = null;
         let is_animating = true;
@@ -122,8 +123,8 @@ function ShallowWaterViewer(props) {
         let fps_list = [];
     
         const advance_and_render = dt => {
-            solver.advance(gl, dt);
-            solver.render(gl);
+            solver.advance(dt);
+            renderer.render();
         }
     
         const do_animation = timestep => {
@@ -176,13 +177,13 @@ function ShallowWaterViewer(props) {
             }
             else if (event.key == 'Escape') {
                 const state = create_shallow_water_state(grid, 'quiescent');
-                solver.inject_state(gl, state, true);
+                solver.inject_state(state, true);
             }
         }
     
         window.onclick = event => {
             const state = create_shallow_water_state(grid, 'drop', event.pageX, ny - event.pageY);
-            solver.inject_state(gl, state);
+            solver.inject_state(state);
             props.onshowhideinstructions(false);
         }
     
