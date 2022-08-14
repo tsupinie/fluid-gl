@@ -110,13 +110,18 @@ class WebGLEntity {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, image['mag_filter']);
 
-        if (tex_coords !== undefined && a_tex_coord_name !== undefined && program !== undefined && u_sampler_name !== undefined) {
-            ret['uniforms'][u_sampler_name] = gl.getUniformLocation(program, u_sampler_name);
-            ret['attributes'][a_tex_coord_name] = gl.getAttribLocation(program, a_tex_coord_name);
-
-            ret['tex_coord'] = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, ret['tex_coord']);
-            gl.bufferData(gl.ARRAY_BUFFER, tex_coords, gl.STATIC_DRAW);
+        if (program !== undefined) {
+            if (u_sampler_name !== undefined) {
+                ret['uniforms'][u_sampler_name] = gl.getUniformLocation(program, u_sampler_name);
+            }
+            
+            if (tex_coords !== undefined && a_tex_coord_name !== undefined) {
+                ret['attributes'][a_tex_coord_name] = gl.getAttribLocation(program, a_tex_coord_name);
+    
+                ret['tex_coord'] = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, ret['tex_coord']);
+                gl.bufferData(gl.ARRAY_BUFFER, tex_coords, gl.STATIC_DRAW);
+            }
         }
 
         return ret;
