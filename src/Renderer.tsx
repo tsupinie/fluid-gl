@@ -126,6 +126,9 @@ class Renderer extends WebGLEntity {
         gl.uniform2f(this.u_unit, 1 / grid['nx'], 1 / grid['ny']);
         gl.uniform1f(this.u_dot_size, this.dot_size);
 
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.n_verts_per_dot * this.n_dots);
     }
 }
