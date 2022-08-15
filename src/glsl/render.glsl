@@ -21,5 +21,8 @@ void main() {
     highp float scaled_hght = 2. * logistic_max * (1. / (1. + exp(-logistic_k * hght)) - 0.5);
 
     highp float cmap_coord = clamp((scaled_hght - cmap_min) / (cmap_max - cmap_min), 0., 1.);
-    gl_FragColor = texture2D(u_colormap_sampler, vec2(cmap_coord, 0.5));
+    highp vec3 color = texture2D(u_colormap_sampler, vec2(cmap_coord, 0.5)).rgb;
+    highp float alpha = clamp((0.5 - dot_pos) / (0.5 - 0.4), 0., 1.);
+
+    gl_FragColor = vec4(color, alpha);
 }
