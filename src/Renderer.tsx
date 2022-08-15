@@ -31,7 +31,7 @@ class Renderer extends WebGLEntity {
 
         this.solver = solver;
         this.dot_size = 0.002;
-        this.dot_density = 0.1;
+        this.dot_density = 0.15;
 
         this.setup();
     }
