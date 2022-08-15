@@ -5,6 +5,7 @@ import * as React from "react";
 
 import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
+import Renderer from "./Renderer";
 
 enum ICMethod {
     'random',
@@ -121,10 +122,10 @@ function ShallowWaterViewer(props) {
         const grid = {'nx': nx + 1, 'ny': ny + 1, 'dx': 0.09};
 
         const initial_state = create_shallow_water_state(grid, ICMethod.quiescent);
-        const solver = new ShallowWaterSolver(grid, initial_state);
+        const solver = new ShallowWaterSolver(gl, grid, initial_state);
+        const renderer = new Renderer(solver);
 
-        solver.setup(gl);
-        solver.render(gl);
+        renderer.render();
 
         let last_timestep = null;
         let is_animating = true;
@@ -134,9 +135,9 @@ function ShallowWaterViewer(props) {
         const n_frames_mean = 600;
         let fps_list = [];
     
-        const advance_and_render = (dt: number) => {
-            solver.advance(gl, dt);
-            solver.render(gl);
+        const advance_and_render = dt => {
+            solver.advance(dt);
+            renderer.render();
         }
     
         const do_animation = (timestep: number) => {
@@ -189,13 +190,13 @@ function ShallowWaterViewer(props) {
             }
             else if (event.key == 'Escape') {
                 const state = create_shallow_water_state(grid, ICMethod.quiescent);
-                solver.inject_state(gl, state, true);
+                solver.inject_state(state, true);
             }
         }
     
-        window.onclick = (event: MouseEvent) => {
+        window.onclick = event => {
             const state = create_shallow_water_state(grid, ICMethod.drop, event.pageX, ny - event.pageY);
-            solver.inject_state(gl, state);
+            solver.inject_state(state);
             props.onshowhideinstructions(false);
         }
     

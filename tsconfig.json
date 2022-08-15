@@ -1,6 +1,8 @@
 {
     "compilerOptions": {
         "jsx": "react-jsx",
-        "downlevelIteration": true
+        "downlevelIteration": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true
     },
 }

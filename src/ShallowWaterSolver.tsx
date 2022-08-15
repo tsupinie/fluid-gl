@@ -1,10 +1,10 @@
 
 import {WebGLEntity, VerticesType, TexCoordsType} from "./WebGLEntity";
 
-const vertex_shader_src = require('./glsl/vertex.glsl');
+const solver_vertex_shader_src = require('./glsl/solver_vertex.glsl');
+
 const solver_fragment_shader_src = require('./glsl/solver.glsl');
 const inject_fragment_shader_src = require('./glsl/inject.glsl');
-const render_fragment_shader_src = require('./glsl/render.glsl');
 
 interface GridType {
     nx: number;
@@ -25,25 +25,19 @@ interface StateFramebufferType {
 }
 
 class ShallowWaterSolver extends WebGLEntity {
+    gl: WebGLRenderingContext
     grid: GridType;
     state: ShallowWaterStateType;
-    is_initialized: boolean;
 
-    verts: Float32Array;
     tex_coords: Float32Array;
 
     program: WebGLProgram;
     inject_program: WebGLProgram;
-    render_program: WebGLProgram;
 
     vertices: VerticesType;
     inject_vertices: VerticesType;
-    render_vertices: VerticesType;
     texcoords: VerticesType;
-    render_texcoords: VerticesType;
 
-    render_u_sampler: WebGLUniformLocation;
-    render_u_unit: WebGLUniformLocation;
     u_unit: WebGLUniformLocation;
     u_dx: WebGLUniformLocation;
     u_dt: WebGLUniformLocation;
@@ -52,36 +46,33 @@ class ShallowWaterSolver extends WebGLEntity {
     stages: StateFramebufferType[];
     inject_state_fb: StateFramebufferType;
 
-    constructor(grid: GridType, initial_state: ShallowWaterStateType) {
+    constructor(gl: WebGLRenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
         super();
 
+        this.gl = gl;
         this.grid = grid;
         this.state = initial_state;
 
-        this.is_initialized = false;
+        this.setup();
     }
 
-    setup(gl: WebGLRenderingContext) {
+    setup() : void {
+        const gl = this.gl;
+
         gl.getExtension('OES_texture_float');
         gl.getExtension('OES_texture_float_linear');
         gl.getExtension('WEBGL_color_buffer_float');
 
-        this.inject_program = this._compileAndLinkShaders(gl, vertex_shader_src, inject_fragment_shader_src);
-        this.program = this._compileAndLinkShaders(gl, vertex_shader_src, solver_fragment_shader_src);
-        this.render_program = this._compileAndLinkShaders(gl, vertex_shader_src, render_fragment_shader_src);
+        this.program = this._compileAndLinkShaders(gl, solver_vertex_shader_src, solver_fragment_shader_src);
+        this.inject_program = this._compileAndLinkShaders(gl, solver_vertex_shader_src, inject_fragment_shader_src);
 
-        this.verts = new Float32Array([-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
+        const verts = new Float32Array([-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
         this.tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
 
-        this.inject_vertices = this._setupVertices(gl, this.inject_program, this.verts, 2, 'a_pos');
-        this.vertices = this._setupVertices(gl, this.program, this.verts, 2, 'a_pos');
-        this.render_vertices = this._setupVertices(gl, this.render_program, this.verts, 2, 'a_pos');
+        this.vertices = this._setupVertices(gl, this.program, verts, 2, 'a_pos');
+        this.inject_vertices = this._setupVertices(gl, this.inject_program, verts, 2, 'a_pos');
 
         this.texcoords = this._setupVertices(gl, this.program, this.tex_coords, 2, 'a_tex_coord');
-        this.render_texcoords = this._setupVertices(gl, this.render_program, this.tex_coords, 2, 'a_tex_coord');
-
-        this.render_u_sampler = gl.getUniformLocation(this.render_program, 'u_sampler');
-        this.render_u_unit = gl.getUniformLocation(this.render_program, 'u_unit');
 
         // Set up model state textures and framebuffers
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
@@ -117,12 +108,11 @@ class ShallowWaterSolver extends WebGLEntity {
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.inject_state_fb['framebuffer']);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.inject_state_fb['texture']['texture'], 0);
 
-        this.inject_state(gl, this.state);
-
-        this.is_initialized = true;
+        this.inject_state(this.state);
     }
 
-    inject_state(gl: WebGLRenderingContext, state: ShallowWaterStateType, clear_state?: boolean) {
+    inject_state(state: ShallowWaterStateType, clear_state?: boolean) : void {
+        const gl = this.gl;
         clear_state = clear_state === undefined ? false : clear_state;
 
         if (state['z'].length != this.grid['nx'] * this.grid['ny']) {
@@ -176,8 +166,8 @@ class ShallowWaterSolver extends WebGLEntity {
         gl.deleteBuffer(texture['tex_coord']);
     }
 
-    advance(gl: WebGLRenderingContext, dt: number) {
-        if (!this.is_initialized) return;
+    advance(dt: number) : void {
+        const gl = this.gl;
 
         gl.useProgram(this.program);
         gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
@@ -218,20 +208,8 @@ class ShallowWaterSolver extends WebGLEntity {
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
     }
 
-    render(gl: WebGLRenderingContext) {
-        if (!this.is_initialized) return;
-
-        gl.useProgram(this.render_program);
-        gl.viewport(0, 0, (this.grid['nx'] - 1) * 2, (this.grid['ny'] - 1) * 2);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        this._bindVertices(gl, this.render_vertices);
-        this._bindVertices(gl, this.render_texcoords);
-        this._bindTexture(gl, 0, this.stages[0]['texture'], false);
-        gl.uniform1i(this.render_u_sampler, 0);
-        gl.uniform2f(this.render_u_unit, 1 / this.grid['nx'], 1 / this.grid['ny']);
-
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    getStateTexture() : WebGLTexture {
+        return this.stages[0]['texture']['texture'];
     }
 }
 
