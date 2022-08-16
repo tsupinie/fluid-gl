@@ -51,7 +51,7 @@ function create_shallow_water_state(grid: GridType, method?: ICMethod, ...method
         const center_x = args[0] === undefined ? nx / 4 : args[0];
         const center_y = args[1] === undefined ? ny / 3 : args[1];
         const filter_width = args[2] === undefined ? nx / 64 : args[2];
-        const amplitude = args[3] === undefined ? 1 : args[3];
+        const amplitude = args[3] === undefined ? 0.6 : args[3];
         const shape = args[4] === undefined ? 10 : args[4];
 
         const shape_fac = (shape + amplitude) / shape;
