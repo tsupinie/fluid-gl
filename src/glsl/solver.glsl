@@ -39,6 +39,7 @@ void main() {
     // v_i-1/2,j, v_i-1/2,j+1, u_i,j-1/2 and u_i,j+1/2 are needed for u momentum advection by v wind
     // z_i-1/2,j z_i+1/2,j, z_i,j-1/2, and z_i,j+1/2 are the scalars defined at the velocity points
 
+    // Grab the state at this location and surrounding locations
     if (u_istage == 0) {
         tex = texture2D(u_stage0_sampler, v_tex_coord).rgb;
         tex_ip1half = texture2D(u_stage0_sampler, v_tex_coord + 0.5 * ihat).rgb;
@@ -118,6 +119,7 @@ void main() {
         dz_flux_dy = 0.;
     }
 
+    // Compute tendencies
     highp vec3 dtex_dt = vec3(0., 0., 0.);
 
     dtex_dt.r = -(mean_depth + hght) * (du_dx + dv_dy) - dz_flux_dx - dz_flux_dy + inv_turb_prandtl * kinematic_viscosity * (d2z_dx2 + d2z_dy2);
@@ -126,13 +128,16 @@ void main() {
     highp vec3 out_tex;
 
     if (u_istage == 0) {
+        // RK3 stage 1
         out_tex = tex + u_dt / 3. * dtex_dt;
     }
     else if (u_istage == 1) {
+        // RK3 stage 2
         highp vec3 tex_stage0 = texture2D(u_stage0_sampler, v_tex_coord).rgb;
         out_tex = tex_stage0 + 0.5 * u_dt * dtex_dt;
     }
     else if (u_istage == 2) {
+        // RK3 stage 3
         highp vec3 tex_stage0 = texture2D(u_stage0_sampler, v_tex_coord).rgb;
         out_tex = tex_stage0 + u_dt * dtex_dt;
 

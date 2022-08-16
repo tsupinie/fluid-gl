@@ -46,8 +46,10 @@ class Renderer extends WebGLEntity {
         gl.getExtension('OES_texture_float_linear');
         gl.getExtension('WEBGL_color_buffer_float');
 
+        // Compile shader program
         this.program = this._compileAndLinkShaders(gl, render_vertex_shader_src, render_fragment_shader_src);
 
+        // Setup the coordinates for all the dots
         const n_coords_per_vert = 2;
         this.n_verts_per_dot = 6;
 
@@ -91,17 +93,20 @@ class Renderer extends WebGLEntity {
             }
         }
 
+        // Setup attribute and texture coordinate buffers
         this.vertices = this._setupVertices(gl, this.program, render_verts, n_coords_per_vert, 'a_pos');
         this.offsets = this._setupVertices(gl, this.program, render_offsets, n_coords_per_vert, 'a_offset');
+        this.texcoords = this._setupVertices(gl, this.program, tex_coords, 2, 'a_tex_coord');
+
+        // Find the locations of the uniform values in the shader programs
         this.u_dot_size = gl.getUniformLocation(this.program, 'u_dot_size');
         this.u_aspect = gl.getUniformLocation(this.program, 'u_aspect');
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
         this.u_sampler = gl.getUniformLocation(this.program, 'u_sampler');
 
+        // Setup the texture for the height colormap
         const cmap_image = {'format': gl.RGBA, 'type': gl.UNSIGNED_BYTE, 'image': colormaps[colormap].getImage(), 'mag_filter': gl.LINEAR};
         this.cmap_texture = this._setupTexture(gl, cmap_image, this.program, 'u_colormap_sampler');
-
-        this.texcoords = this._setupVertices(gl, this.program, tex_coords, 2, 'a_tex_coord');
     }
 
     render() : void {
@@ -118,19 +123,23 @@ class Renderer extends WebGLEntity {
             'texture': this.solver.getStateTexture()
         };
 
+        // Bind attribute and texture coordinate buffers
         this._bindVertices(gl, this.vertices);
         this._bindVertices(gl, this.offsets);
         this._bindVertices(gl, this.texcoords);
         this._bindTexture(gl, 1, state_texture);
         this._bindTexture(gl, 0, this.cmap_texture);
 
+        // Set uniform values
         gl.uniform1f(this.u_aspect, grid['nx'] / grid['ny']);
         gl.uniform2f(this.u_unit, 1 / grid['nx'], 1 / grid['ny']);
         gl.uniform1f(this.u_dot_size, this.dot_size);
 
+        // Enable blending
         gl.enable(gl.BLEND);
         gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
+        // Draw the dots
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.n_verts_per_dot * this.n_dots);
     }
 }

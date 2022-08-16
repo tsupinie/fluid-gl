@@ -63,31 +63,35 @@ class ShallowWaterSolver extends WebGLEntity {
         gl.getExtension('OES_texture_float_linear');
         gl.getExtension('WEBGL_color_buffer_float');
 
+        // Compile the shader programs
         this.program = this._compileAndLinkShaders(gl, solver_vertex_shader_src, solver_fragment_shader_src);
         this.inject_program = this._compileAndLinkShaders(gl, solver_vertex_shader_src, inject_fragment_shader_src);
 
         const verts = new Float32Array([-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
         this.tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
 
+        // Setup vertex and texture coordinate buffers
         this.vertices = this._setupVertices(gl, this.program, verts, 2, 'a_pos');
         this.inject_vertices = this._setupVertices(gl, this.inject_program, verts, 2, 'a_pos');
 
         this.texcoords = this._setupVertices(gl, this.program, this.tex_coords, 2, 'a_tex_coord');
 
-        // Set up model state textures and framebuffers
+        // Find the locations of the uniform values in the shaders
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
         this.u_dx = gl.getUniformLocation(this.program, 'u_dx');
         this.u_dt = gl.getUniformLocation(this.program, 'u_dt');
         this.u_istage = gl.getUniformLocation(this.program, 'u_istage');
+
+        // Setup framebuffers and associated textures for the 3 stages of the RK3 integration
+        // Stage 0 is the "main state", other stages are intermediate values.
+        const n_stages = 3;
+        this.stages = [];
 
         const state_img = {
             'format': gl.RGBA, 'type': gl.FLOAT, 
             'width': this.grid['nx'], 'height': this.grid['ny'], 'image': null,
             'mag_filter': gl.LINEAR
         }
-
-        const n_stages = 3;
-        this.stages = [];
 
         for (let istg = 0; istg < n_stages + 1; istg++) {
             const sampler = gl.getUniformLocation(this.program, `u_stage${istg}_sampler`);
@@ -99,6 +103,7 @@ class ShallowWaterSolver extends WebGLEntity {
             this.stages.push({'framebuffer': framebuffer, 'texture': texture, 'sampler': sampler});
         }
 
+        // Setup the framebuffer for the state injection.
         this.inject_state_fb = {
             'framebuffer': gl.createFramebuffer(),
             'texture': this._setupTexture(gl, state_img),
@@ -192,7 +197,7 @@ class ShallowWaterSolver extends WebGLEntity {
             gl.bindTexture(gl.TEXTURE_2D, null);
         }
 
-        // Advance model state
+        // Advance model state (3 calls to gl.drawArrays correspond to the 3 stages of the RK3 time integration)
         for (let istg = 0; istg < this.stages.length - 1; istg++) {
             gl.uniform1i(this.stages[istg]['sampler'], istg);
             this._bindTexture(gl, istg, this.stages[istg]['texture']);
