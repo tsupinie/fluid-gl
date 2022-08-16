@@ -25,7 +25,7 @@ void main() {
 
     v_state_coord = (a_pos + 1.) / 2.;
 
-    highp float logistic_k = 50.;
+    highp float logistic_k = 70.;
     highp float logistic_max = 0.02;
 
     highp vec3 state_ip1half = texture2D(u_sampler, v_state_coord + 0.5 * ihat).rgb;
