@@ -108,10 +108,10 @@ class ShallowWaterSolver extends WebGLEntity {
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.inject_state_fb['framebuffer']);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.inject_state_fb['texture']['texture'], 0);
 
-        this.inject_state(this.state);
+        this.injectState(this.state);
     }
 
-    inject_state(state: ShallowWaterStateType, clear_state?: boolean) : void {
+    injectState(state: ShallowWaterStateType, clear_state?: boolean) : void {
         const gl = this.gl;
         clear_state = clear_state === undefined ? false : clear_state;
 
