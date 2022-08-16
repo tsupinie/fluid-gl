@@ -178,12 +178,14 @@ function ShallowWaterViewer(props) {
             else if (event.key == 'Escape') {
                 const state = create_shallow_water_state(grid, 'quiescent');
                 solver.inject_state(state, true);
+                renderer.render();
             }
         }
     
         window.onclick = event => {
             const state = create_shallow_water_state(grid, 'drop', event.pageX, ny - event.pageY);
             solver.inject_state(state);
+            renderer.render();
             props.onshowhideinstructions(false);
         }
     
