@@ -5,22 +5,27 @@ body {
 
 div#readout {
     position: absolute;
-    bottom: 5px;
-    left: 5px;
+    bottom: 0px;
+    left: 0px;
+    padding: 5px;
     color: #ffffff;
     cursor: default;
+    background-color: #00000077;
 }
 
 div#instructions {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 100%;
+    width: 30em;
+    padding: 0.5em;
     transform: translate(-50%, -50%);
     text-align: center;
     font-size: 2.5em;
     color: #ffffff;
     cursor: default;
+    background-color: #00000077;
+    border-radius: 10px;
 }
 
 span.key {
