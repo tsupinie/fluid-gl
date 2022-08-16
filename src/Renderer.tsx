@@ -1,10 +1,12 @@
 
 import {ShallowWaterSolver} from "./ShallowWaterSolver";
 import {WebGLEntity, VerticesType, TexCoordsType} from "./WebGLEntity";
-import {seismic_colormap} from "./colormap";
+import {colormaps} from "./colormap";
 
 const render_vertex_shader_src = require('./glsl/render_vertex.glsl');
 const render_fragment_shader_src = require('./glsl/render.glsl');
+
+const colormap = 'piyg';
 
 class Renderer extends WebGLEntity {
     solver: ShallowWaterSolver;
@@ -96,7 +98,7 @@ class Renderer extends WebGLEntity {
         this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
         this.u_sampler = gl.getUniformLocation(this.program, 'u_sampler');
 
-        const cmap_image = {'format': gl.RGBA, 'type': gl.UNSIGNED_BYTE, 'image': seismic_colormap.getImage(), 'mag_filter': gl.LINEAR};
+        const cmap_image = {'format': gl.RGBA, 'type': gl.UNSIGNED_BYTE, 'image': colormaps[colormap].getImage(), 'mag_filter': gl.LINEAR};
         this.cmap_texture = this._setupTexture(gl, cmap_image, this.program, 'u_colormap_sampler');
 
         this.texcoords = this._setupVertices(gl, this.program, tex_coords, 2, 'a_tex_coord');

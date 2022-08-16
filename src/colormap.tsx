@@ -1,5 +1,6 @@
 
 import seismic_colors from './json/seismic.json';
+import piyg_colors from './json/piyg.json';
 
 class Colormap {
     colors: string[];
@@ -25,6 +26,9 @@ class Colormap {
     }
 }
 
-const seismic_colormap = new Colormap(seismic_colors);
+const colormaps = {
+    'seismic': new Colormap(seismic_colors),
+    'piyg': new Colormap(piyg_colors)
+}
 
-export {seismic_colormap};
+export {colormaps};
