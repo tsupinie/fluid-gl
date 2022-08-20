@@ -13,7 +13,7 @@ void main() {
 
     if (dot_pos > 0.5) discard;
 
-    highp float logistic_k = 50.;
+    highp float logistic_k = 250.;
     highp float logistic_max = 1.;
 
     highp vec3 tex = texture2D(u_sampler, v_state_coord).rgb;

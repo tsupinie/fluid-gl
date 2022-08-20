@@ -7,10 +7,15 @@ import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWate
 import "./ShallowWaterViewer.css";
 import Renderer from "./Renderer";
 
-function create_shallow_water_state(...args): ShallowWaterStateType {
-    const grid = args[0];
-    const method = args[1] === undefined ? 'random' : args[1];
-    const method_args = [...args].slice(2);
+enum ICMethod {
+    'random',
+    'quiescent',
+    'bump',
+    'drop'
+}
+
+function create_shallow_water_state(grid: GridType, method?: ICMethod, ...method_args: any[]): ShallowWaterStateType {
+    method = method === undefined ? ICMethod.random : method;
 
     const nx = grid['nx'], ny = grid['ny'];
 
@@ -18,42 +23,42 @@ function create_shallow_water_state(...args): ShallowWaterStateType {
     const initial_u = new Float32Array(nx * ny);
     const initial_v = new Float32Array(nx * ny);
 
-    const random_ics = () => {
-        return (i: number, j: number, idx: number) => {
+    const random_ics = () : Function => {
+        return (i: number, j: number, idx: number) : void => {
             initial_z[idx] = Math.random();
             initial_u[idx] = Math.random();
             initial_v[idx] = Math.random();
         }
     }
 
-    const quiescent = () => {
-        return (i: number, j: number, idx: number) => {}
+    const quiescent = () : Function => {
+        return (i: number, j: number, idx: number) : void => {}
     }
 
-    const bump = (center_x: number, center_y: number, filter_width: number) => {
-        center_x = center_x === undefined ? nx / 4 : center_x;
-        center_x = center_y === undefined ? nx / 3 : center_y;
-        filter_width = filter_width === undefined ? nx / 64 : filter_width;
+    const bump = (...args: number[]) : Function => {
+        const center_x = args[0] === undefined ? nx / 4 : args[0];
+        const center_y = args[1] === undefined ? nx / 3 : args[1];
+        const filter_width = args[2] === undefined ? nx / 64 : args[2];
 
-        return (i: number, j: number, idx: number) => {
+        return (i: number, j: number, idx: number) : void => {
             const x_term = (i - center_x) / filter_width;
             const y_term = (j - center_y) / filter_width;
             initial_z[idx] = 2 * Math.exp(-(x_term * x_term) - (y_term * y_term));
         }
     }
 
-    const drop = (center_x: number, center_y: number, filter_width: number, amplitude: number, shape: number) => {
-        center_x = center_x === undefined ? nx / 4 : center_x;
-        center_y = center_y === undefined ? ny / 3 : center_y;
-        filter_width = filter_width === undefined ? nx / 64 : filter_width;
-        amplitude = amplitude === undefined ? 1 : amplitude;
-        shape = shape === undefined ? 10 : shape;
+    const drop = (...args: number[]) : Function => {
+        const center_x = args[0] === undefined ? nx / 4 : args[0];
+        const center_y = args[1] === undefined ? ny / 3 : args[1];
+        const filter_width = args[2] === undefined ? nx / 64 : args[2];
+        const amplitude = args[3] === undefined ? 0.6 : args[3];
+        const shape = args[4] === undefined ? 10 : args[4];
 
         const shape_fac = (shape + amplitude) / shape;
         const o_filter_width = 1 / filter_width;
         const cutoff = filter_width * 4;
 
-        return (i: number, j: number, idx: number) => {
+        return (i: number, j: number, idx: number) : void => {
             if (Math.abs(i - center_x) < cutoff && Math.abs(j - center_y) < cutoff) {
                 const x_term = (i - center_x) * o_filter_width;
                 const y_term = (j - center_y) * o_filter_width;
@@ -63,16 +68,24 @@ function create_shallow_water_state(...args): ShallowWaterStateType {
             }
         }
     }
-
-    const gen = {
-        'random': random_ics,
-        'quiescent': quiescent,
-        'bump': bump,
-        'drop': drop,
-    }[method];
-
-    if (gen === undefined) {
-        throw `Unknown generation method '${method}'`;
+    
+    let gen : Function;
+    
+    switch (method) {
+        case ICMethod.random:
+            gen = random_ics;
+            break;
+        case ICMethod.quiescent:
+            gen = quiescent;
+            break;
+        case ICMethod.bump:
+            gen = bump;
+            break;
+        case ICMethod.drop:
+            gen = drop;
+            break;
+        default:
+            throw `Unknown generation method '${method}'`;
     }
 
     const gen_meth = gen(...method_args);
@@ -106,9 +119,9 @@ function ShallowWaterViewer(props) {
     
         const nx = canvas.current.width / 2;
         const ny = canvas.current.height / 2;
-        const grid = {'nx': nx, 'ny': ny, 'dx': 0.1};
+        const grid = {'nx': nx + 1, 'ny': ny + 1, 'dx': 0.09};
 
-        const initial_state = create_shallow_water_state(grid, 'quiescent');
+        const initial_state = create_shallow_water_state(grid, ICMethod.quiescent);
         const solver = new ShallowWaterSolver(gl, grid, initial_state);
         const renderer = new Renderer(solver);
 
@@ -127,7 +140,7 @@ function ShallowWaterViewer(props) {
             renderer.render();
         }
     
-        const do_animation = timestep => {
+        const do_animation = (timestep: number) => {
             n_frames++;
             let readout_str = "";
             if (last_timestep !== null) {
@@ -159,7 +172,7 @@ function ShallowWaterViewer(props) {
     
         raf.current = window.requestAnimationFrame(do_animation);
     
-        window.onkeydown = event => {
+        window.onkeydown = (event: KeyboardEvent) => {
             if (event.key == ' ') {
                 is_animating = !is_animating;
                 if (is_animating) {
@@ -176,20 +189,20 @@ function ShallowWaterViewer(props) {
                 advance_and_render(dt);
             }
             else if (event.key == 'Escape') {
-                const state = create_shallow_water_state(grid, 'quiescent');
+                const state = create_shallow_water_state(grid, ICMethod.quiescent);
                 solver.injectState(state, true);
                 renderer.render();
             }
         }
     
         window.onclick = event => {
-            const state = create_shallow_water_state(grid, 'drop', event.pageX, ny - event.pageY);
+            const state = create_shallow_water_state(grid, ICMethod.drop, event.pageX, ny - event.pageY);
             solver.injectState(state);
             renderer.render();
             props.onshowhideinstructions(false);
         }
     
-        window.onmousemove = event => {
+        window.onmousemove = (event: MouseEvent) => {
             mouse_x = event.pageX;
             mouse_y = event.pageY;
         }
