@@ -24,7 +24,6 @@ interface ShallowWaterStateType {
 class ShallowWaterSolver {
     gl: WebGLRenderingContext
     grid: GridType;
-    state: ShallowWaterStateType;
 
     program: WGLProgram;
     inject_program: WGLProgram;
@@ -38,12 +37,11 @@ class ShallowWaterSolver {
     constructor(gl: WebGLRenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
         this.gl = gl;
         this.grid = grid;
-        this.state = initial_state;
 
-        this.setup();
+        this.setup(initial_state);
     }
 
-    setup() : void {
+    setup(initial_state: ShallowWaterStateType) : void {
         const gl = this.gl;
 
         gl.getExtension('OES_texture_float');
@@ -54,10 +52,10 @@ class ShallowWaterSolver {
         this.program = new WGLProgram(gl, solver_vertex_shader_src, solver_fragment_shader_src);
         this.inject_program = new WGLProgram(gl, solver_vertex_shader_src, inject_fragment_shader_src);
 
+        // Setup vertex and texture coordinate buffers
         const verts = new Float32Array([-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
         const tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
 
-        // Setup vertex and texture coordinate buffers
         this.vertices = new WGLBuffer(gl, verts, 2, gl.TRIANGLE_STRIP);
         this.texcoords = new WGLBuffer(gl, tex_coords, 2, gl.TRIANGLE_STRIP);
 
@@ -80,7 +78,8 @@ class ShallowWaterSolver {
             this.aux_fb.push(createFramebufferTexture(state_img));
         }
 
-        this.injectState(this.state);
+        // Inject the initial state
+        this.injectState(initial_state, true); 
     }
 
     injectState(state: ShallowWaterStateType, clear_state?: boolean) : void {
@@ -111,7 +110,7 @@ class ShallowWaterSolver {
         const temp_framebuffer = this.aux_fb[0];
         temp_framebuffer.clear([0., 0., 0., 1.]);
 
-        // Combine the current state and new texture into the injection framebuffer
+        // Combine the current state and new texture into a temporary framebuffer
         this.inject_program.use(
             {'a_pos': this.vertices, 'a_tex_coord': this.texcoords},
             {},
@@ -125,7 +124,7 @@ class ShallowWaterSolver {
         temp_framebuffer.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
         this.inject_program.draw();
         
-        // Now copy the injection framebuffer back into the main state
+        // Now copy the temporary framebuffer back into the main state
         temp_framebuffer.copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
 
         // Delete injected state texture
