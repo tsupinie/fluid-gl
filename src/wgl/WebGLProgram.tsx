@@ -46,10 +46,10 @@ const compileAndLinkShaders = (gl: WebGLRenderingContext, vertex_shader_src: str
 const UNIFORM_FUNCTION_TYPES = {
     'sampler2D': '1i',
     'int': '1i',
-    'highp float': '1f',
-    'highp vec2': '2fv',
-    'highp vec3': '3fv',
-    'highp vec4': '4fv',
+    'float': '1f',
+    'vec2': '2fv',
+    'vec3': '3fv',
+    'vec4': '4fv',
 }
 
 class WGLProgram {
@@ -83,12 +83,14 @@ class WGLProgram {
 
         for (const match of vertex_shader_src.matchAll(/uniform +([\w ]+?) +([\w_]+);$/mg)) {
             const [full_match, type, u_name] = match;
-            this.uniforms[u_name] = {'type': type, 'location': gl.getUniformLocation(this.prog, u_name)};
+            const type_parts = type.split(' ');
+            this.uniforms[u_name] = {'type': type_parts[type_parts.length - 1], 'location': gl.getUniformLocation(this.prog, u_name)};
         }
 
         for (const match of fragment_shader_src.matchAll(/uniform +([\w ]+?) +([\w_]+);$/mg)) {
             const [full_match, type, u_name] = match;
-            this.uniforms[u_name] = {'type': type, 'location': gl.getUniformLocation(this.prog, u_name)};
+            const type_parts = type.split(' ');
+            this.uniforms[u_name] = {'type': type_parts[type_parts.length - 1], 'location': gl.getUniformLocation(this.prog, u_name)};
         }
     }
 

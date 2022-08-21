@@ -1,36 +1,32 @@
 
 import {ShallowWaterSolver} from "./ShallowWaterSolver";
-import {WebGLEntity, VerticesType, TexCoordsType} from "./WebGLEntity";
 import {colormaps} from "./colormap";
+import { WGLBuffer } from "./wgl/WebGLBuffer";
+import { WGLProgram } from "./wgl/WebGLProgram";
+import { WGLTexture } from "./wgl/WebGLTexture";
+import { WGLFramebuffer } from "./wgl/WebGLFramebuffer";
 
 const render_vertex_shader_src = require('./glsl/render_vertex.glsl');
 const render_fragment_shader_src = require('./glsl/render.glsl');
 
 const colormap = 'piyg';
 
-class Renderer extends WebGLEntity {
+class Renderer {
     solver: ShallowWaterSolver;
     dot_size: number;
     dot_density: number;
 
-    program: WebGLProgram;
+    program: WGLProgram;
 
     n_dots: number;
     n_verts_per_dot: number;
     
-    vertices: VerticesType;
-    offsets: VerticesType;
-    texcoords: VerticesType;
-    cmap_texture: TexCoordsType;
-
-    u_dot_size: WebGLUniformLocation;
-    u_aspect: WebGLUniformLocation;
-    u_sampler: WebGLUniformLocation;
-    u_unit: WebGLUniformLocation;
+    vertices: WGLBuffer;
+    offsets: WGLBuffer;
+    texcoords: WGLBuffer;
+    cmap_texture: WGLTexture;
 
     constructor(solver: ShallowWaterSolver) {
-        super();
-
         this.solver = solver;
         this.dot_size = 0.002;
         this.dot_density = 0.15;
@@ -47,7 +43,7 @@ class Renderer extends WebGLEntity {
         gl.getExtension('WEBGL_color_buffer_float');
 
         // Compile shader program
-        this.program = this._compileAndLinkShaders(gl, render_vertex_shader_src, render_fragment_shader_src);
+        this.program = new WGLProgram(gl, render_vertex_shader_src, render_fragment_shader_src);
 
         // Setup the coordinates for all the dots
         const n_coords_per_vert = 2;
@@ -94,46 +90,27 @@ class Renderer extends WebGLEntity {
         }
 
         // Setup attribute and texture coordinate buffers
-        this.vertices = this._setupVertices(gl, this.program, render_verts, n_coords_per_vert, 'a_pos');
-        this.offsets = this._setupVertices(gl, this.program, render_offsets, n_coords_per_vert, 'a_offset');
-        this.texcoords = this._setupVertices(gl, this.program, tex_coords, 2, 'a_tex_coord');
-
-        // Find the locations of the uniform values in the shader programs
-        this.u_dot_size = gl.getUniformLocation(this.program, 'u_dot_size');
-        this.u_aspect = gl.getUniformLocation(this.program, 'u_aspect');
-        this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
-        this.u_sampler = gl.getUniformLocation(this.program, 'u_sampler');
+        this.vertices = new WGLBuffer(gl, render_verts, n_coords_per_vert);
+        this.offsets = new WGLBuffer(gl, render_offsets, n_coords_per_vert);
+        this.texcoords = new WGLBuffer(gl, tex_coords, 2);
 
         // Setup the texture for the height colormap
         const cmap_image = {'format': gl.RGBA, 'type': gl.UNSIGNED_BYTE, 'image': colormaps[colormap].getImage(), 'mag_filter': gl.LINEAR};
-        this.cmap_texture = this._setupTexture(gl, cmap_image, this.program, 'u_colormap_sampler');
+        this.cmap_texture = new WGLTexture(gl, cmap_image);
     }
 
     render() : void {
         const gl = this.solver.gl;
         const grid = this.solver.grid;
 
-        gl.useProgram(this.program);
+        this.program.use(
+            {'a_pos': this.vertices, 'a_offset': this.offsets, 'a_tex_coord': this.texcoords},
+            {'u_aspect': grid['nx'] / grid['ny'], 'u_unit': [1 / grid['nx'], 1 / grid['ny']], 'u_dot_size': this.dot_size},
+            {'u_sampler': this.solver.getStateTexture(), 'u_colormap_sampler': this.cmap_texture}
+        );
+
         gl.viewport(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        const state_texture = {
-            'attributes': {},
-            'uniforms': {'u_sampler': this.u_sampler},
-            'texture': this.solver.getStateTexture()
-        };
-
-        // Bind attribute and texture coordinate buffers
-        this._bindVertices(gl, this.vertices);
-        this._bindVertices(gl, this.offsets);
-        this._bindVertices(gl, this.texcoords);
-        this._bindTexture(gl, 1, state_texture);
-        this._bindTexture(gl, 0, this.cmap_texture);
-
-        // Set uniform values
-        gl.uniform1f(this.u_aspect, grid['nx'] / grid['ny']);
-        gl.uniform2f(this.u_unit, 1 / grid['nx'], 1 / grid['ny']);
-        gl.uniform1f(this.u_dot_size, this.dot_size);
+        WGLFramebuffer.renderToScreen();
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.n_verts_per_dot * this.n_dots);
     }

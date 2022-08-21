@@ -174,8 +174,8 @@ class ShallowWaterSolver {
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
     }
 
-    getStateTexture() : WebGLTexture {
-        return this.main_state_fb.texture.texture;
+    getStateTexture() : WGLTexture {
+        return this.main_state_fb.texture;
     }
 }
 
