@@ -1,5 +1,8 @@
 
-import {WebGLEntity, VerticesType, TexCoordsType} from "./WebGLEntity";
+import { WGLBuffer } from "./wgl/WebGLBuffer";
+import { WGLFramebuffer } from "./wgl/WebGLFramebuffer";
+import { WGLProgram } from "./wgl/WebGLProgram";
+import { WGLTexture, WGLTextureSpec } from "./wgl/WebGLTexture";
 
 const solver_vertex_shader_src = require('./glsl/solver_vertex.glsl');
 
@@ -18,37 +21,22 @@ interface ShallowWaterStateType {
     z: Float32Array;
 }
 
-interface StateFramebufferType {
-    framebuffer: WebGLFramebuffer;
-    texture: TexCoordsType;
-    sampler: WebGLUniformLocation;
-}
-
-class ShallowWaterSolver extends WebGLEntity {
+class ShallowWaterSolver {
     gl: WebGLRenderingContext
     grid: GridType;
     state: ShallowWaterStateType;
 
-    tex_coords: Float32Array;
+    program: WGLProgram;
+    inject_program: WGLProgram;
 
-    program: WebGLProgram;
-    inject_program: WebGLProgram;
+    vertices: WGLBuffer;
+    texcoords: WGLBuffer;
 
-    vertices: VerticesType;
-    inject_vertices: VerticesType;
-    texcoords: VerticesType;
-
-    u_unit: WebGLUniformLocation;
-    u_dx: WebGLUniformLocation;
-    u_dt: WebGLUniformLocation;
-    u_istage: WebGLUniformLocation;
-
-    stages: StateFramebufferType[];
-    inject_state_fb: StateFramebufferType;
+    main_state_fb: WGLFramebuffer;
+    stages: WGLFramebuffer[];
+    inject_state_fb: WGLFramebuffer;
 
     constructor(gl: WebGLRenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
-        super();
-
         this.gl = gl;
         this.grid = grid;
         this.state = initial_state;
@@ -64,26 +52,17 @@ class ShallowWaterSolver extends WebGLEntity {
         gl.getExtension('WEBGL_color_buffer_float');
 
         // Compile the shader programs
-        this.program = this._compileAndLinkShaders(gl, solver_vertex_shader_src, solver_fragment_shader_src);
-        this.inject_program = this._compileAndLinkShaders(gl, solver_vertex_shader_src, inject_fragment_shader_src);
+        this.program = new WGLProgram(gl, solver_vertex_shader_src, solver_fragment_shader_src);
+        this.inject_program = new WGLProgram(gl, solver_vertex_shader_src, inject_fragment_shader_src);
 
         const verts = new Float32Array([-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
-        this.tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
+        const tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
 
         // Setup vertex and texture coordinate buffers
-        this.vertices = this._setupVertices(gl, this.program, verts, 2, 'a_pos');
-        this.inject_vertices = this._setupVertices(gl, this.inject_program, verts, 2, 'a_pos');
-
-        this.texcoords = this._setupVertices(gl, this.program, this.tex_coords, 2, 'a_tex_coord');
-
-        // Find the locations of the uniform values in the shaders
-        this.u_unit = gl.getUniformLocation(this.program, 'u_unit');
-        this.u_dx = gl.getUniformLocation(this.program, 'u_dx');
-        this.u_dt = gl.getUniformLocation(this.program, 'u_dt');
-        this.u_istage = gl.getUniformLocation(this.program, 'u_istage');
+        this.vertices = new WGLBuffer(gl, verts, 2);
+        this.texcoords = new WGLBuffer(gl, tex_coords, 2);
 
         // Setup framebuffers and associated textures for the 3 stages of the RK3 integration
-        // Stage 0 is the "main state", other stages are intermediate values.
         const n_stages = 3;
         this.stages = [];
 
@@ -93,25 +72,19 @@ class ShallowWaterSolver extends WebGLEntity {
             'mag_filter': gl.LINEAR
         }
 
-        for (let istg = 0; istg < n_stages + 1; istg++) {
-            const sampler = gl.getUniformLocation(this.program, `u_stage${istg}_sampler`);
-            const framebuffer = gl.createFramebuffer();
-            const texture = this._setupTexture(gl, state_img);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture['texture'], 0);
+        const createFramebufferTexture = (img: WGLTextureSpec): WGLFramebuffer => {
+            const texture = new WGLTexture(gl, state_img)
+            return new WGLFramebuffer(gl, texture);
+        }
 
-            this.stages.push({'framebuffer': framebuffer, 'texture': texture, 'sampler': sampler});
+        this.main_state_fb = createFramebufferTexture(state_img);
+
+        for (let istg = 0; istg < n_stages; istg++) {
+            this.stages.push(createFramebufferTexture(state_img));
         }
 
         // Setup the framebuffer for the state injection.
-        this.inject_state_fb = {
-            'framebuffer': gl.createFramebuffer(),
-            'texture': this._setupTexture(gl, state_img),
-            'sampler': gl.getUniformLocation(this.inject_program, 'u_sampler_cur')
-        };
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.inject_state_fb['framebuffer']);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.inject_state_fb['texture']['texture'], 0);
+        this.inject_state_fb = createFramebufferTexture(state_img);
 
         this.injectState(this.state);
     }
@@ -139,82 +112,70 @@ class ShallowWaterSolver extends WebGLEntity {
             'mag_filter': gl.LINEAR
         }
 
-        const texture = this._setupTexture(gl, state_img, this.inject_program, 'u_sampler_new', this.tex_coords, 'a_tex_coord');  
+        const texture = new WGLTexture(gl, state_img);
 
         // Combine the current state and new texture into the injection framebuffer
-        gl.useProgram(this.inject_program);
+        this.inject_program.use(
+            {'a_pos': this.vertices, 'a_tex_coord': this.texcoords},
+            {},
+            {'u_sampler_new': texture, 'u_sampler_cur': this.main_state_fb.texture}
+        );
 
         if (clear_state) {
-            // If we want to clear first, clear the main state buffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this.stages[0]['framebuffer']);
-            gl.clearColor(0., 0., 0., 1.);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            this.main_state_fb.clear([0., 0., 0., 1.]);
         }
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.inject_state_fb['framebuffer']);
+        this.inject_state_fb.renderTo();
         gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
 
-        const main_state_texture = {'attributes': {}, 'uniforms': {'sampler': this.inject_state_fb['sampler']}, 'texture': this.stages[0]['texture']['texture']};
-
-        this._bindVertices(gl, this.inject_vertices);
-        this._bindTexture(gl, 0, texture);
-        this._bindTexture(gl, 1, main_state_texture);
-
+        // Move this to the program class
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         
         // Now copy the injection framebuffer back into the main state
-        this._bindTexture(gl, 0, main_state_texture);
+        this.main_state_fb.texture.activate(0);
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
 
         // Delete injected state texture
-        gl.deleteTexture(texture['texture']);
-        gl.deleteBuffer(texture['tex_coord']);
+        texture.delete();
     }
 
     advance(dt: number) : void {
         const gl = this.gl;
 
-        gl.useProgram(this.program);
+        this.program.use(
+            {'a_pos': this.vertices, 'a_tex_coord': this.texcoords},
+            {'u_unit': [1 / this.grid['nx'], 1 / this.grid['ny']], 'u_dx': this.grid['dx'], 'u_dt': dt},
+        );
+
         gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
 
-        this._bindVertices(gl, this.vertices);
-        this._bindVertices(gl, this.texcoords);
-
-        gl.uniform2f(this.u_unit, 1 / this.grid['nx'], 1 / this.grid['ny']);
-        gl.uniform1f(this.u_dx, this.grid['dx']);
-        gl.uniform1f(this.u_dt, dt);
-
         // Clear all intermediate buffers
-        gl.clearColor(0., 0., 0., 1.);
-        for (let istg = 1; istg < this.stages.length; istg++) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this.stages[istg]['framebuffer']);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-        }
+        this.stages.forEach(stg => stg.clear([0., 0., 0., 1.]));
 
         // Unbind previous textures
-        for (let istg = 0; istg < this.stages.length - 1; istg++) {
+        for (let istg = 0; istg < this.stages.length; istg++) {
             gl.activeTexture(gl['TEXTURE' + istg]);
             gl.bindTexture(gl.TEXTURE_2D, null);
         }
 
         // Advance model state (3 calls to gl.drawArrays correspond to the 3 stages of the RK3 time integration)
-        for (let istg = 0; istg < this.stages.length - 1; istg++) {
-            gl.uniform1i(this.stages[istg]['sampler'], istg);
-            this._bindTexture(gl, istg, this.stages[istg]['texture']);
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this.stages[istg + 1]['framebuffer']);
-            gl.uniform1i(this.u_istage, istg);
+        const tex_map = {};
+        this.stages.forEach((stg, istg) => {
+            tex_map[`u_stage${istg}_sampler`] = istg == 0 ? this.main_state_fb.texture : this.stages[istg - 1].texture;
+            this.program.bindTextures(tex_map);
+            this.program.setUniforms({'u_istage': istg});
+            stg.renderTo();
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        }
+        });
 
         // Copy post state back to main state framebuffer
-        this._bindTexture(gl, 0, this.stages[0]['texture']);
+        this.main_state_fb.texture.activate(0);
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
     }
 
     getStateTexture() : WebGLTexture {
-        return this.stages[0]['texture']['texture'];
+        return this.main_state_fb.texture.texture;
     }
 }
 
