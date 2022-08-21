@@ -4,7 +4,7 @@ interface WGLTextureSpec {
     type: number;
     width?: number;
     height?: number;
-    mag_filter: number;
+    mag_filter?: number;
     image: any;
 }
 
@@ -19,6 +19,19 @@ class WGLTexture {
         this.texture = gl.createTexture();
         this.tex_num = null;
 
+        this.setImageData(image);
+
+        const mag_filter = image['mag_filter'] === undefined ? gl.LINEAR : image['mag_filter'];
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mag_filter);
+    }
+
+    setImageData(image: WGLTextureSpec): void {
+        const gl = this.gl;
+
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
         if ('width' in image && 'height' in image) {
@@ -29,11 +42,6 @@ class WGLTexture {
             gl.texImage2D(gl.TEXTURE_2D, 0, image['format'], 
                 image['format'], image['type'], image['image']);
         }
-        
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, image['mag_filter']);
     }
 
     bindToProgram(prog_uni_location: WebGLUniformLocation, gl_tex_num: number): void {

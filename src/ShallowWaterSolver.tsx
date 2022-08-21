@@ -101,20 +101,19 @@ class ShallowWaterSolver {
 
         const state_img = {
             'format': gl.RGBA, 'type': gl.FLOAT, 
-            'width': this.grid['nx'], 'height': this.grid['ny'], 'image': img_data,
-            'mag_filter': gl.LINEAR
+            'width': this.grid['nx'], 'height': this.grid['ny'], 'image': img_data
         }
 
-        const texture = new WGLTexture(gl, state_img);
-
         const temp_framebuffer = this.aux_fb[0];
-        temp_framebuffer.clear([0., 0., 0., 1.]);
+        const temp_texture = this.aux_fb[1].texture;
+
+        temp_texture.setImageData(state_img);
 
         // Combine the current state and new texture into a temporary framebuffer
         this.inject_program.use(
             {'a_pos': this.vertices, 'a_tex_coord': this.texcoords},
             {},
-            {'u_sampler_new': texture, 'u_sampler_cur': this.main_state_fb.texture}
+            {'u_sampler_new': temp_texture, 'u_sampler_cur': this.main_state_fb.texture}
         );
 
         if (clear_state) {
@@ -126,9 +125,6 @@ class ShallowWaterSolver {
         
         // Now copy the temporary framebuffer back into the main state
         temp_framebuffer.copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
-
-        // Delete injected state texture
-        texture.delete();
     }
 
     advance(dt: number) : void {
