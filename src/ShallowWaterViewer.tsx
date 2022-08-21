@@ -170,7 +170,9 @@ function ShallowWaterViewer(props) {
             raf.current = window.requestAnimationFrame(do_animation);
         }
     
-        raf.current = window.requestAnimationFrame(do_animation);
+        if (is_animating) {
+            raf.current = window.requestAnimationFrame(do_animation);
+        }
     
         window.onkeydown = (event: KeyboardEvent) => {
             if (event.key == ' ') {
