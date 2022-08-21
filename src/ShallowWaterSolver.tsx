@@ -34,7 +34,6 @@ class ShallowWaterSolver {
 
     main_state_fb: WGLFramebuffer;
     stages: WGLFramebuffer[];
-    inject_state_fb: WGLFramebuffer;
 
     constructor(gl: WebGLRenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
         this.gl = gl;
@@ -83,9 +82,6 @@ class ShallowWaterSolver {
             this.stages.push(createFramebufferTexture(state_img));
         }
 
-        // Setup the framebuffer for the state injection.
-        this.inject_state_fb = createFramebufferTexture(state_img);
-
         this.injectState(this.state);
     }
 
@@ -114,6 +110,9 @@ class ShallowWaterSolver {
 
         const texture = new WGLTexture(gl, state_img);
 
+        const temp_framebuffer = this.stages[0];
+        temp_framebuffer.clear([0., 0., 0., 1.]);
+
         // Combine the current state and new texture into the injection framebuffer
         this.inject_program.use(
             {'a_pos': this.vertices, 'a_tex_coord': this.texcoords},
@@ -125,11 +124,11 @@ class ShallowWaterSolver {
             this.main_state_fb.clear([0., 0., 0., 1.]);
         }
 
-        this.inject_state_fb.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
+        temp_framebuffer.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
         this.inject_program.draw();
         
         // Now copy the injection framebuffer back into the main state
-        this.inject_state_fb.copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
+        temp_framebuffer.copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
 
         // Delete injected state texture
         texture.delete();
