@@ -109,8 +109,7 @@ class Renderer {
             {'u_sampler': this.solver.getStateTexture(), 'u_colormap_sampler': this.cmap_texture}
         );
 
-        gl.viewport(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
-        WGLFramebuffer.renderToScreen();
+        WGLFramebuffer.screen.renderTo(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.n_verts_per_dot * this.n_dots);
     }

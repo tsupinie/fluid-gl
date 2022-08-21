@@ -1,15 +1,45 @@
 
 import { WGLTexture } from "./WebGLTexture";
 
-class WGLFramebuffer {
+class WGLFramebufferBase {
     gl: WebGLRenderingContext;
     texture: WGLTexture;
     framebuffer: WebGLFramebuffer;
 
+    clear(color: [number, number, number, number]): void {
+        const gl = this.gl;
+        gl.clearColor(...color);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+
+    renderTo(x: number, y: number, width: number, height: number): void {
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.viewport(x, y, width, height);
+    }
+}
+
+class WGLScreenbuffer extends WGLFramebufferBase {
+    constructor() {
+        super();
+
+        this.gl = null;
+
+        this.texture = null;
+        this.framebuffer = null;
+    }
+
+    registerGLContext(gl: WebGLRenderingContext) {
+        this.gl = gl;
+    }
+}
+
+class WGLFramebuffer extends WGLFramebufferBase {
     constructor(gl: WebGLRenderingContext, texture: WGLTexture) {
-        if (WGLFramebuffer.gl === null) {
-            WGLFramebuffer.gl = gl;
-        }
+        super();
+
+        this.gl = gl;
 
         this.texture = texture
         this.framebuffer = gl.createFramebuffer();
@@ -18,24 +48,7 @@ class WGLFramebuffer {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture['texture'], 0);
     }
 
-    clear(color: [number, number, number, number]): void {
-        const gl = WGLFramebuffer.gl;
-        gl.clearColor(...color);
-        this.renderTo();
-        gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    renderTo(): void {
-        const gl = WGLFramebuffer.gl;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-    }
-
-    static gl: WebGLRenderingContext = null;
-
-    static renderToScreen(): void {
-        const gl = WGLFramebuffer.gl;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
+    static screen: WGLScreenbuffer = new WGLScreenbuffer();
 }
 
 export {WGLFramebuffer};

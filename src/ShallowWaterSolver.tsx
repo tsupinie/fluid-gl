@@ -125,8 +125,7 @@ class ShallowWaterSolver {
             this.main_state_fb.clear([0., 0., 0., 1.]);
         }
 
-        this.inject_state_fb.renderTo();
-        gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
+        this.inject_state_fb.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
 
         // Move this to the program class
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -147,8 +146,6 @@ class ShallowWaterSolver {
             {'u_unit': [1 / this.grid['nx'], 1 / this.grid['ny']], 'u_dx': this.grid['dx'], 'u_dt': dt},
         );
 
-        gl.viewport(0, 0, this.grid['nx'], this.grid['ny']);
-
         // Clear all intermediate buffers
         this.stages.forEach(stg => stg.clear([0., 0., 0., 1.]));
 
@@ -164,7 +161,7 @@ class ShallowWaterSolver {
             tex_map[`u_stage${istg}_sampler`] = istg == 0 ? this.main_state_fb.texture : this.stages[istg - 1].texture;
             this.program.bindTextures(tex_map);
             this.program.setUniforms({'u_istage': istg});
-            stg.renderTo();
+            stg.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         });

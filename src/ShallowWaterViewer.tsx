@@ -6,6 +6,7 @@ import * as React from "react";
 import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
 import Renderer from "./Renderer";
+import { WGLFramebuffer } from "./wgl/WebGLFramebuffer";
 
 enum ICMethod {
     'random',
@@ -113,6 +114,7 @@ function ShallowWaterViewer(props) {
         let mouse_x = null, mouse_y = null;
     
         const gl = canvas.current.getContext('webgl');
+        WGLFramebuffer.screen.registerGLContext(gl);
     
         gl.clearColor(0., 0., 0., 1.);
         gl.clear(gl.COLOR_BUFFER_BIT);
