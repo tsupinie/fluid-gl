@@ -136,8 +136,6 @@ class ShallowWaterSolver {
     }
 
     advance(dt: number) : void {
-        const gl = this.gl;
-
         this.program.use(
             {'a_pos': this.vertices, 'a_tex_coord': this.texcoords},
             {'u_unit': [1 / this.grid['nx'], 1 / this.grid['ny']], 'u_dx': this.grid['dx'], 'u_dt': dt},

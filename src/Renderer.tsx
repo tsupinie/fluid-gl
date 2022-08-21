@@ -100,7 +100,6 @@ class Renderer {
     }
 
     render() : void {
-        const gl = this.solver.gl;
         const grid = this.solver.grid;
 
         this.program.use(
