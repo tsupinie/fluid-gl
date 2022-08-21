@@ -90,9 +90,9 @@ class Renderer {
         }
 
         // Setup attribute and texture coordinate buffers
-        this.vertices = new WGLBuffer(gl, render_verts, n_coords_per_vert);
-        this.offsets = new WGLBuffer(gl, render_offsets, n_coords_per_vert);
-        this.texcoords = new WGLBuffer(gl, tex_coords, 2);
+        this.vertices = new WGLBuffer(gl, render_verts, n_coords_per_vert, gl.TRIANGLE_STRIP);
+        this.offsets = new WGLBuffer(gl, render_offsets, n_coords_per_vert, gl.TRIANGLE_STRIP);
+        this.texcoords = new WGLBuffer(gl, tex_coords, 2, gl.TRIANGLE_STRIP);
 
         // Setup the texture for the height colormap
         const cmap_image = {'format': gl.RGBA, 'type': gl.UNSIGNED_BYTE, 'image': colormaps[colormap].getImage(), 'mag_filter': gl.LINEAR};
@@ -111,7 +111,7 @@ class Renderer {
 
         WGLFramebuffer.screen.renderTo(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
 
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.n_verts_per_dot * this.n_dots);
+        this.program.draw();
     }
 }
 

@@ -59,8 +59,8 @@ class ShallowWaterSolver {
         const tex_coords = new Float32Array([0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
 
         // Setup vertex and texture coordinate buffers
-        this.vertices = new WGLBuffer(gl, verts, 2);
-        this.texcoords = new WGLBuffer(gl, tex_coords, 2);
+        this.vertices = new WGLBuffer(gl, verts, 2, gl.TRIANGLE_STRIP);
+        this.texcoords = new WGLBuffer(gl, tex_coords, 2, gl.TRIANGLE_STRIP);
 
         // Setup framebuffers and associated textures for the 3 stages of the RK3 integration
         const n_stages = 3;
@@ -126,9 +126,7 @@ class ShallowWaterSolver {
         }
 
         this.inject_state_fb.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
-
-        // Move this to the program class
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        this.inject_program.draw();
         
         // Now copy the injection framebuffer back into the main state
         this.main_state_fb.texture.activate(0);
@@ -160,7 +158,7 @@ class ShallowWaterSolver {
             this.program.setUniforms({'u_istage': istg});
             stg.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
 
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            this.program.draw();
         });
 
         // Copy post state back to main state framebuffer

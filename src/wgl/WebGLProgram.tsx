@@ -69,12 +69,18 @@ class WGLProgram {
         }
     }
 
+    n_verts: number;
+    draw_mode: number;
+
     constructor(gl: WebGLRenderingContext, vertex_shader_src: string, fragment_shader_src: string) {
         this.gl = gl;
         this.prog = compileAndLinkShaders(gl, vertex_shader_src, fragment_shader_src);
 
         this.attributes = {};
         this.uniforms = {};
+
+        this.n_verts = null;
+        this.draw_mode = null;
 
         for (const match of vertex_shader_src.matchAll(/attribute +([\w ]+?) +([\w_]+);$/mg)) {
             const [full_match, type, a_name] = match;
@@ -96,6 +102,9 @@ class WGLProgram {
 
     use(attribute_buffers?: {[key: string]: WGLBuffer}, uniform_values?: {[key: string]: (number | number[])}, textures?: {[key: string]: WGLTexture}): void {
         this.gl.useProgram(this.prog);
+        
+        this.draw_mode = null;
+        this.n_verts = null;
 
         if (attribute_buffers !== undefined) {
             this.bindAttributes(attribute_buffers);
@@ -112,6 +121,13 @@ class WGLProgram {
 
     bindAttributes(attribute_buffers: {[key: string]: WGLBuffer}): void {
         Object.entries(attribute_buffers).forEach(([a_name, buffer]) => {
+            this.n_verts = this.n_verts === null ? buffer.n_verts : this.n_verts;
+            this.draw_mode = this.draw_mode === null ? buffer.draw_mode : this.draw_mode;
+
+            if (this.draw_mode != buffer.draw_mode || this.n_verts != buffer.n_verts) {
+                throw `Unexpected draw mode or number of vertices.`;
+            }
+
             const {type, location} = this.attributes[a_name];
             buffer.bindToProgram(location);
         });
@@ -128,6 +144,10 @@ class WGLProgram {
         Object.entries(textures).forEach(([sampler_name, texture], gl_tex_num) => {
             texture.bindToProgram(this.uniforms[sampler_name]['location'], gl_tex_num);
         });
+    }
+
+    draw(): void {
+        this.gl.drawArrays(this.draw_mode, 0, this.n_verts);
     }
 }
 
