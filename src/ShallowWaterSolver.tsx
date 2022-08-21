@@ -38,10 +38,13 @@ class ShallowWaterSolver {
         this.gl = gl;
         this.grid = grid;
 
-        this.setup(initial_state);
+        this.setup();
+
+        // Inject the initial state
+        this.injectState(initial_state, true); 
     }
 
-    setup(initial_state: ShallowWaterStateType) : void {
+    setup() : void {
         const gl = this.gl;
 
         gl.getExtension('OES_texture_float');
@@ -77,9 +80,6 @@ class ShallowWaterSolver {
         for (let istg = 0; istg < 2; istg++) {
             this.aux_fb.push(createFramebufferTexture(state_img));
         }
-
-        // Inject the initial state
-        this.injectState(initial_state, true); 
     }
 
     injectState(state: ShallowWaterStateType, clear_state?: boolean) : void {
