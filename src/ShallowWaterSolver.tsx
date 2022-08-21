@@ -129,8 +129,7 @@ class ShallowWaterSolver {
         this.inject_program.draw();
         
         // Now copy the injection framebuffer back into the main state
-        this.main_state_fb.texture.activate(0);
-        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
+        this.inject_state_fb.copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
 
         // Delete injected state texture
         texture.delete();
@@ -162,8 +161,7 @@ class ShallowWaterSolver {
         });
 
         // Copy post state back to main state framebuffer
-        this.main_state_fb.texture.activate(0);
-        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, this.grid['nx'], this.grid['ny'], 0);
+        this.stages[this.stages.length - 1].copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
     }
 
     getStateTexture() : WGLTexture {

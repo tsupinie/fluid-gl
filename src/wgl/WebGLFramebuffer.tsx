@@ -18,6 +18,14 @@ class WGLFramebufferBase {
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
         gl.viewport(x, y, width, height);
     }
+
+    copyToTexture(texture: WGLTexture, x: number, y: number, width: number, height: number): void {
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        texture.activate(0);
+
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, x, y, width, height, 0);
+    }
 }
 
 class WGLScreenbuffer extends WGLFramebufferBase {
