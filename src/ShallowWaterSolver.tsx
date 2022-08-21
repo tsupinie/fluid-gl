@@ -1,6 +1,6 @@
 
 import { WGLBuffer } from "./wgl/WebGLBuffer";
-import { WGLFramebuffer } from "./wgl/WebGLFramebuffer";
+import { WGLFramebuffer, flipFlopBuffers } from "./wgl/WebGLFramebuffer";
 import { WGLProgram } from "./wgl/WebGLProgram";
 import { WGLTexture, WGLTextureSpec } from "./wgl/WebGLTexture";
 
@@ -33,7 +33,7 @@ class ShallowWaterSolver {
     texcoords: WGLBuffer;
 
     main_state_fb: WGLFramebuffer;
-    stages: WGLFramebuffer[];
+    aux_fb: WGLFramebuffer[];
 
     constructor(gl: WebGLRenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
         this.gl = gl;
@@ -61,10 +61,7 @@ class ShallowWaterSolver {
         this.vertices = new WGLBuffer(gl, verts, 2, gl.TRIANGLE_STRIP);
         this.texcoords = new WGLBuffer(gl, tex_coords, 2, gl.TRIANGLE_STRIP);
 
-        // Setup framebuffers and associated textures for the 3 stages of the RK3 integration
-        const n_stages = 3;
-        this.stages = [];
-
+        // Setup the main state and auxiliary rendering framebuffers
         const state_img = {
             'format': gl.RGBA, 'type': gl.FLOAT, 
             'width': this.grid['nx'], 'height': this.grid['ny'], 'image': null,
@@ -78,8 +75,9 @@ class ShallowWaterSolver {
 
         this.main_state_fb = createFramebufferTexture(state_img);
 
-        for (let istg = 0; istg < n_stages; istg++) {
-            this.stages.push(createFramebufferTexture(state_img));
+        this.aux_fb = [];
+        for (let istg = 0; istg < 2; istg++) {
+            this.aux_fb.push(createFramebufferTexture(state_img));
         }
 
         this.injectState(this.state);
@@ -110,7 +108,7 @@ class ShallowWaterSolver {
 
         const texture = new WGLTexture(gl, state_img);
 
-        const temp_framebuffer = this.stages[0];
+        const temp_framebuffer = this.aux_fb[0];
         temp_framebuffer.clear([0., 0., 0., 1.]);
 
         // Combine the current state and new texture into the injection framebuffer
@@ -140,25 +138,20 @@ class ShallowWaterSolver {
             {'u_unit': [1 / this.grid['nx'], 1 / this.grid['ny']], 'u_dx': this.grid['dx'], 'u_dt': dt},
         );
 
-        // Clear all intermediate buffers
-        this.stages.forEach(stg => stg.clear([0., 0., 0., 1.]));
+        const doRK3Stage = (src_fb: WGLFramebuffer, dest_fb: WGLFramebuffer, istage: number) : void => {
+            this.program.bindTextures({'u_sampler': src_fb.texture, 'u_time_t_sampler': this.main_state_fb.texture});
+            this.program.setUniforms({'u_istage': istage});
 
-        // Unbind previous textures
-        this.stages.forEach(stg => stg.texture.deactivate());
-
-        // Advance model state (3 calls to gl.drawArrays correspond to the 3 stages of the RK3 time integration)
-        const tex_map = {};
-        this.stages.forEach((stg, istg) => {
-            tex_map[`u_stage${istg}_sampler`] = istg == 0 ? this.main_state_fb.texture : this.stages[istg - 1].texture;
-            this.program.bindTextures(tex_map);
-            this.program.setUniforms({'u_istage': istg});
-            stg.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
-
+            dest_fb.renderTo(0, 0, this.grid['nx'], this.grid['ny']);
             this.program.draw();
-        });
+        }
+
+        // Advance model state
+        const n_stages = 3;        
+        const result_fb = flipFlopBuffers(n_stages, this.main_state_fb, this.aux_fb, doRK3Stage);
 
         // Copy post state back to main state framebuffer
-        this.stages[this.stages.length - 1].copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
+        result_fb.copyToTexture(this.main_state_fb.texture, 0, 0, this.grid['nx'], this.grid['ny']);
     }
 
     getStateTexture() : WGLTexture {

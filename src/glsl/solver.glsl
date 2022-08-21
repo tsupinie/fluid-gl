@@ -1,7 +1,6 @@
 
-uniform sampler2D u_stage0_sampler;
-uniform sampler2D u_stage1_sampler;
-uniform sampler2D u_stage2_sampler;
+uniform sampler2D u_sampler;
+uniform sampler2D u_time_t_sampler;
 
 uniform highp vec2 u_unit;
 uniform highp float u_dx;
@@ -40,45 +39,17 @@ void main() {
     // z_i-1/2,j z_i+1/2,j, z_i,j-1/2, and z_i,j+1/2 are the scalars defined at the velocity points
 
     // Grab the state at this location and surrounding locations
-    if (u_istage == 0) {
-        tex = texture2D(u_stage0_sampler, v_tex_coord).rgb;
-        tex_ip1half = texture2D(u_stage0_sampler, v_tex_coord + 0.5 * ihat).rgb;
-        tex_im1half = texture2D(u_stage0_sampler, v_tex_coord - 0.5 * ihat).rgb;
-        tex_jp1half = texture2D(u_stage0_sampler, v_tex_coord + 0.5 * jhat).rgb;
-        tex_jm1half = texture2D(u_stage0_sampler, v_tex_coord - 0.5 * jhat).rgb;
-        tex_ip1_jm1half = texture2D(u_stage0_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
-        tex_im1half_jp1 = texture2D(u_stage0_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
-        tex_ip1 = texture2D(u_stage0_sampler, v_tex_coord + ihat).rgb;
-        tex_jp1 = texture2D(u_stage0_sampler, v_tex_coord + jhat).rgb;
-        tex_im1 = texture2D(u_stage0_sampler, v_tex_coord - ihat).rgb;
-        tex_jm1 = texture2D(u_stage0_sampler, v_tex_coord - jhat).rgb;
-    }
-    else if (u_istage == 1) {
-        tex = texture2D(u_stage1_sampler, v_tex_coord).rgb;
-        tex_ip1half = texture2D(u_stage1_sampler, v_tex_coord + 0.5 * ihat).rgb;
-        tex_im1half = texture2D(u_stage1_sampler, v_tex_coord - 0.5 * ihat).rgb;
-        tex_jp1half = texture2D(u_stage1_sampler, v_tex_coord + 0.5 * jhat).rgb;
-        tex_jm1half = texture2D(u_stage1_sampler, v_tex_coord - 0.5 * jhat).rgb;
-        tex_ip1_jm1half = texture2D(u_stage1_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
-        tex_im1half_jp1 = texture2D(u_stage1_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
-        tex_ip1 = texture2D(u_stage1_sampler, v_tex_coord + ihat).rgb;
-        tex_jp1 = texture2D(u_stage1_sampler, v_tex_coord + jhat).rgb;
-        tex_im1 = texture2D(u_stage1_sampler, v_tex_coord - ihat).rgb;
-        tex_jm1 = texture2D(u_stage1_sampler, v_tex_coord - jhat).rgb;
-    }
-    else if (u_istage == 2) {
-        tex = texture2D(u_stage2_sampler, v_tex_coord).rgb;
-        tex_ip1half = texture2D(u_stage2_sampler, v_tex_coord + 0.5 * ihat).rgb;
-        tex_im1half = texture2D(u_stage2_sampler, v_tex_coord - 0.5 * ihat).rgb;
-        tex_jp1half = texture2D(u_stage2_sampler, v_tex_coord + 0.5 * jhat).rgb;
-        tex_jm1half = texture2D(u_stage2_sampler, v_tex_coord - 0.5 * jhat).rgb;
-        tex_ip1_jm1half = texture2D(u_stage2_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
-        tex_im1half_jp1 = texture2D(u_stage2_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
-        tex_ip1 = texture2D(u_stage2_sampler, v_tex_coord + ihat).rgb;
-        tex_jp1 = texture2D(u_stage2_sampler, v_tex_coord + jhat).rgb;
-        tex_im1 = texture2D(u_stage2_sampler, v_tex_coord - ihat).rgb;
-        tex_jm1 = texture2D(u_stage2_sampler, v_tex_coord - jhat).rgb;
-    }
+    tex = texture2D(u_sampler, v_tex_coord).rgb;
+    tex_ip1half = texture2D(u_sampler, v_tex_coord + 0.5 * ihat).rgb;
+    tex_im1half = texture2D(u_sampler, v_tex_coord - 0.5 * ihat).rgb;
+    tex_jp1half = texture2D(u_sampler, v_tex_coord + 0.5 * jhat).rgb;
+    tex_jm1half = texture2D(u_sampler, v_tex_coord - 0.5 * jhat).rgb;
+    tex_ip1_jm1half = texture2D(u_sampler, v_tex_coord + ihat - 0.5 * jhat).rgb;
+    tex_im1half_jp1 = texture2D(u_sampler, v_tex_coord - 0.5 * ihat + jhat).rgb;
+    tex_ip1 = texture2D(u_sampler, v_tex_coord + ihat).rgb;
+    tex_jp1 = texture2D(u_sampler, v_tex_coord + jhat).rgb;
+    tex_im1 = texture2D(u_sampler, v_tex_coord - ihat).rgb;
+    tex_jm1 = texture2D(u_sampler, v_tex_coord - jhat).rgb;
 
     hght = tex.r;
     hght_ip1half = tex_ip1half.r; hght_im1half = tex_im1half.r; hght_jp1half = tex_jp1half.r; hght_jm1half = tex_jm1half.r;
@@ -133,12 +104,12 @@ void main() {
     }
     else if (u_istage == 1) {
         // RK3 stage 2
-        highp vec3 tex_stage0 = texture2D(u_stage0_sampler, v_tex_coord).rgb;
+        highp vec3 tex_stage0 = texture2D(u_time_t_sampler, v_tex_coord).rgb;
         out_tex = tex_stage0 + 0.5 * u_dt * dtex_dt;
     }
     else if (u_istage == 2) {
         // RK3 stage 3
-        highp vec3 tex_stage0 = texture2D(u_stage0_sampler, v_tex_coord).rgb;
+        highp vec3 tex_stage0 = texture2D(u_time_t_sampler, v_tex_coord).rgb;
         out_tex = tex_stage0 + u_dt * dtex_dt;
 
         // Apply impermeability condition for u and v

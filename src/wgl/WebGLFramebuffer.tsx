@@ -58,4 +58,27 @@ class WGLFramebuffer extends WGLFramebufferBase {
     static screen: WGLScreenbuffer = new WGLScreenbuffer();
 }
 
-export {WGLFramebuffer};
+const flipFlopBuffers = (n_passes: number, source_fb: WGLFramebuffer, aux_fb: WGLFramebuffer[], 
+                         do_render: (src: WGLFramebuffer, dest: WGLFramebuffer, ipass?: number) => void): WGLFramebuffer => {
+
+    let fb1: WGLFramebuffer, fb2: WGLFramebuffer;
+
+    for (let ipass = 0; ipass < n_passes; ipass++) {
+        // fb1 is the source, and fb2 is the target for this pass
+        [fb1, fb2] = ipass == 0 ? [source_fb, aux_fb[0]] : aux_fb;
+
+        // Clear and unbind destination texture
+        fb2.clear([0., 0., 0., 1.]);
+        fb2.texture.deactivate();
+
+        do_render(fb1, fb2, ipass);
+
+        if (ipass > 0) {
+            aux_fb.reverse();
+        }
+    }
+
+    return fb2;
+}
+
+export {WGLFramebuffer, flipFlopBuffers};
