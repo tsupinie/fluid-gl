@@ -3,7 +3,6 @@ import { WGLTexture } from "./WebGLTexture";
 
 class WGLFramebufferBase {
     gl: WebGLRenderingContext;
-    texture: WGLTexture;
     framebuffer: WebGLFramebuffer;
 
     clear(color: [number, number, number, number]): void {
@@ -33,8 +32,6 @@ class WGLScreenbuffer extends WGLFramebufferBase {
         super();
 
         this.gl = null;
-
-        this.texture = null;
         this.framebuffer = null;
     }
 
@@ -44,6 +41,8 @@ class WGLScreenbuffer extends WGLFramebufferBase {
 }
 
 class WGLFramebuffer extends WGLFramebufferBase {
+    texture: WGLTexture;
+
     constructor(gl: WebGLRenderingContext, texture: WGLTexture) {
         super();
 
