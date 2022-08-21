@@ -11,11 +11,13 @@ interface WGLTextureSpec {
 class WGLTexture {
     gl: WebGLRenderingContext;
     texture: WebGLTexture;
+    tex_num: number;
 
     constructor(gl: WebGLRenderingContext, image: WGLTextureSpec) {
         this.gl = gl;
 
         this.texture = gl.createTexture();
+        this.tex_num = null;
 
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
@@ -40,12 +42,24 @@ class WGLTexture {
     }
 
     activate(gl_tex_num: number): void {
+        this.tex_num = gl_tex_num;
         this.gl.activeTexture(this.gl['TEXTURE' + gl_tex_num]);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
     }
 
+    deactivate(): void {
+        if (this.tex_num === null) {
+            return;
+        }
+
+        this.gl.activeTexture(this.gl['TEXTURE' + this.tex_num]);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        this.tex_num = null;
+    }
+
     delete(): void {
         this.gl.deleteTexture(this.texture);
+        this.tex_num = null;
     }
 }
 

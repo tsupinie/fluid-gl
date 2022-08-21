@@ -150,10 +150,7 @@ class ShallowWaterSolver {
         this.stages.forEach(stg => stg.clear([0., 0., 0., 1.]));
 
         // Unbind previous textures
-        for (let istg = 0; istg < this.stages.length; istg++) {
-            gl.activeTexture(gl['TEXTURE' + istg]);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-        }
+        this.stages.forEach(stg => stg.texture.deactivate());
 
         // Advance model state (3 calls to gl.drawArrays correspond to the 3 stages of the RK3 time integration)
         const tex_map = {};
