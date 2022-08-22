@@ -1,10 +1,7 @@
 
 import {ShallowWaterSolver} from "./ShallowWaterSolver";
 import {colormaps} from "./colormap";
-import { WGLBuffer } from "./wgl/WebGLBuffer";
-import { WGLProgram } from "./wgl/WebGLProgram";
-import { WGLTexture } from "./wgl/WebGLTexture";
-import { WGLFramebuffer } from "./wgl/WebGLFramebuffer";
+import { WGLBuffer, WGLProgram, WGLTexture, WGLFramebuffer } from "./wgl"
 
 const render_vertex_shader_src = require('./glsl/render_vertex.glsl');
 const render_fragment_shader_src = require('./glsl/render.glsl');

@@ -1,8 +1,5 @@
 
-import { WGLBuffer } from "./wgl/WebGLBuffer";
-import { WGLFramebuffer, flipFlopBuffers } from "./wgl/WebGLFramebuffer";
-import { WGLProgram } from "./wgl/WebGLProgram";
-import { WGLTexture, WGLTextureSpec } from "./wgl/WebGLTexture";
+import { WGLBuffer, WGLFramebuffer, flipFlopBuffers, WGLProgram, WGLTexture, WGLTextureSpec } from "./wgl";
 
 const solver_vertex_shader_src = require('./glsl/solver_vertex.glsl');
 
