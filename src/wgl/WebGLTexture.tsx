@@ -1,18 +1,40 @@
 
+/**
+ * @module wgl/WebGLTexture
+ * A module containing a helper class for WebGL textures
+ */
+
 interface WGLTextureSpec {
-    format: number;
-    type: number;
+    format: GLenum;
+    type: GLenum;
     width?: number;
     height?: number;
-    mag_filter?: number;
+    mag_filter?: GLenum;
     image: any;
 }
 
+/** Class representing a WebGL texture */
 class WGLTexture {
+    /** @internal */
     gl: WebGLRenderingContext;
+
+    /** @internal */
     texture: WebGLTexture;
+
+    /** @internal */
     tex_num: number;
 
+    /**
+     * 
+     * @param gl               - The WebGL rendering context
+     * @param image            - The specification for the image
+     * @param image.format     - The format for the image (e.g., which color channels are present?). Should be one of gl.RGBA, gl.RGB, etc.
+     * @param image.type       - The data type for the image. Should be one of gl.FLOAT, gl.UNSIGNED_BYTE, etc.
+     * @param image.width      - The width of the texture
+     * @param image.height     - The height of the texture
+     * @param image.mag_filter - The magnification filter to use for the texture. Should be one of gl.LINEAR, gl.NEAREST, etc.
+     * @param image.image      - The image to use for the texture. Can be null to allocate space without filling it.
+     */
     constructor(gl: WebGLRenderingContext, image: WGLTextureSpec) {
         this.gl = gl;
 
@@ -29,6 +51,15 @@ class WGLTexture {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mag_filter);
     }
 
+    /**
+     * Set image data in this texture
+     * @param image        - The specification for the image
+     * @param image.format - The format for the image (e.g., which color channels are present?). Should be one of gl.RGBA, gl.RGB, etc.
+     * @param image.type   - The data type for the image. Should be one of gl.FLOAT, gl.UNSIGNED_BYTE, etc.
+     * @param image.width  - The width of the texture
+     * @param image.height - The height of the texture
+     * @param image.image  - The image to use for the texture. Can be null to allocate space without filling it.
+     */
     setImageData(image: WGLTextureSpec): void {
         const gl = this.gl;
 
@@ -44,17 +75,30 @@ class WGLTexture {
         }
     }
 
+    /**
+     * Bind this texture to a location in a shader program
+     * @internal
+     * @param prog_uni_location - The location of the sampler uniform value (returned from gl.getUniform()) in the shader program.
+     * @param gl_tex_num        - The texture number to bind this texture to.
+     */
     bindToProgram(prog_uni_location: WebGLUniformLocation, gl_tex_num: number): void {
         this.activate(gl_tex_num);
         this.gl.uniform1i(prog_uni_location, gl_tex_num);
     }
 
+    /**
+     * Bind this texture to a given texture number
+     * @param gl_tex_num - The texture number to bind this texture to.
+     */
     activate(gl_tex_num: number): void {
         this.tex_num = gl_tex_num;
         this.gl.activeTexture(this.gl['TEXTURE' + gl_tex_num]);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
     }
 
+    /**
+     * Unbind this texture from the texture number it was most recently bound to.
+     */
     deactivate(): void {
         if (this.tex_num === null) {
             return;
@@ -65,6 +109,9 @@ class WGLTexture {
         this.tex_num = null;
     }
 
+    /**
+     * Delete this texture.
+     */
     delete(): void {
         this.gl.deleteTexture(this.texture);
         this.tex_num = null;

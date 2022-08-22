@@ -2,6 +2,18 @@
 import { WGLBuffer } from "./WebGLBuffer";
 import { WGLTexture } from "./WebGLTexture";
 
+/**
+ * @module wgl/WebGLProgram
+ * Module containing a helper class for WebGL programs
+ */
+
+/**
+ * Compile and link a shader program
+ * @param gl                - The WebGL rendering context
+ * @param vertex_shader_src - The source code for the vertex shader
+ * @param frag_shader_src   - The source code for the fragment shader
+ * @returns                   A compiled and linked WebGL program
+ */
 const compileAndLinkShaders = (gl: WebGLRenderingContext, vertex_shader_src: string, frag_shader_src: string): WebGLProgram => {
     // create a vertex shader
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -52,16 +64,23 @@ const UNIFORM_FUNCTION_TYPES = {
     'vec4': '4fv',
 }
 
+/** Class representing a WebGL shader program */
 class WGLProgram {
+    /** @internal */
     gl: WebGLRenderingContext;
+
+    /** @internal */
     prog: WebGLProgram;
 
+    /** @internal */
     attributes: {
         [key: string]: {
             type: string;
             location: number;
         }
     }
+
+    /** @internal */
     uniforms: {
         [key: string]: {
             type: string;
@@ -69,9 +88,18 @@ class WGLProgram {
         }
     }
 
+    /** @internal */
     n_verts: number;
+    
+    /** @internal */
     draw_mode: number;
 
+    /**
+     * Create and compile a shader program from source
+     * @param gl                  - The WebGL rendering context
+     * @param vertex_shader_src   - The vertex shader source code
+     * @param fragment_shader_src - The fragment shader source code
+     */
     constructor(gl: WebGLRenderingContext, vertex_shader_src: string, fragment_shader_src: string) {
         this.gl = gl;
         this.prog = compileAndLinkShaders(gl, vertex_shader_src, fragment_shader_src);
@@ -100,6 +128,13 @@ class WGLProgram {
         }
     }
 
+    /**
+     * Enable this program for rendering and optionally bind attribute, uniform, and texture values. This function should be called before calling bindAttributes(),
+     * setUniforms(), or bindTextures() on a given rendering pass.
+     * @param attribute_buffers - An object with the keys being the attribute variable names and the values being the buffers to associate with each variable
+     * @param uniform_values    - An object with the keys being the uniform variable names and the values being the uniform values
+     * @param textures          - An object with the keys being the sampler names in the source code and the values being the textures to associate with each sampler
+     */
     use(attribute_buffers?: {[key: string]: WGLBuffer}, uniform_values?: {[key: string]: (number | number[])}, textures?: {[key: string]: WGLTexture}): void {
         this.gl.useProgram(this.prog);
         
@@ -119,6 +154,10 @@ class WGLProgram {
         }
     }
 
+    /**
+     * Bind attribute buffers to variables in this shader program. Call use() on a rendering pass before calling this function.
+     * @param attribute_buffers - An object with the keys being the attribute variable names and the values being the buffers to associate with each variable
+     */
     bindAttributes(attribute_buffers: {[key: string]: WGLBuffer}): void {
         Object.entries(attribute_buffers).forEach(([a_name, buffer]) => {
             this.n_verts = this.n_verts === null ? buffer.n_verts : this.n_verts;
@@ -133,6 +172,10 @@ class WGLProgram {
         });
     }
 
+    /**
+     * Set uniform values in this shader program. Call use() on a rendering pass before calling this function.
+     * @param uniform_values - An object with the keys being the uniform variable names and the values being the uniform values
+     */
     setUniforms(uniform_values: {[key: string]: (number | number[])}): void {
         Object.entries(uniform_values).forEach(([u_name, value]) => {
             const {type, location} = this.uniforms[u_name];
@@ -140,12 +183,19 @@ class WGLProgram {
         });
     }
 
+    /**
+     * Bind textures to samplers in this shader program. Call use() on a rendering pass before calling this function.
+     * @param textures - An object with the keys being the sampler names in the source code and the values being the textures to associate with each sampler
+     */
     bindTextures(textures: {[key: string]: WGLTexture}) {
         Object.entries(textures).forEach(([sampler_name, texture], gl_tex_num) => {
             texture.bindToProgram(this.uniforms[sampler_name]['location'], gl_tex_num);
         });
     }
 
+    /**
+     * Run this shader program.
+     */
     draw(): void {
         this.gl.drawArrays(this.draw_mode, 0, this.n_verts);
     }
