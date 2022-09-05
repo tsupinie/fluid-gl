@@ -1,6 +1,6 @@
 
-import { WGLBuffer } from "./WebGLBuffer";
-import { WGLTexture } from "./WebGLTexture";
+import { WGLBuffer } from "./WGLBuffer";
+import { WGLTexture } from "./WGLTexture";
 
 /**
  * @module wgl/WebGLProgram

@@ -1,5 +1,5 @@
 
-import { WGLTexture } from "./WebGLTexture";
+import { WGLTexture } from "./WGLTexture";
 
 /**
  * @module wgl/WebGLFramebuffer
