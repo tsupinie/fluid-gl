@@ -73,20 +73,10 @@ class WGLProgram {
     prog: WebGLProgram;
 
     /** @internal */
-    attributes: {
-        [key: string]: {
-            type: string;
-            location: number;
-        }
-    }
+    attributes: Record<string, { type: string; location: number; }>
 
     /** @internal */
-    uniforms: {
-        [key: string]: {
-            type: string;
-            location: WebGLUniformLocation;
-        }
-    }
+    uniforms: Record<string, { type: string; location: WebGLUniformLocation; }>
 
     /** @internal */
     n_verts: number;
@@ -135,7 +125,7 @@ class WGLProgram {
      * @param uniform_values    - An object with the keys being the uniform variable names and the values being the uniform values
      * @param textures          - An object with the keys being the sampler names in the source code and the values being the textures to associate with each sampler
      */
-    use(attribute_buffers?: {[key: string]: WGLBuffer}, uniform_values?: {[key: string]: (number | number[])}, textures?: {[key: string]: WGLTexture}): void {
+    use(attribute_buffers?: Record<string, WGLBuffer>, uniform_values?: Record<string, (number | number[])>, textures?: Record<string, WGLTexture>): void {
         this.gl.useProgram(this.prog);
         
         this.draw_mode = null;
@@ -158,7 +148,7 @@ class WGLProgram {
      * Bind attribute buffers to variables in this shader program. When rendring, call {@link WGLProgram.use} before calling this function.
      * @param attribute_buffers - An object with the keys being the attribute variable names and the values being the buffers to associate with each variable
      */
-    bindAttributes(attribute_buffers: {[key: string]: WGLBuffer}): void {
+    bindAttributes(attribute_buffers: Record<string, WGLBuffer>): void {
         Object.entries(attribute_buffers).forEach(([a_name, buffer]) => {
             this.n_verts = this.n_verts === null ? buffer.n_verts : this.n_verts;
             this.draw_mode = this.draw_mode === null ? buffer.draw_mode : this.draw_mode;
@@ -176,7 +166,7 @@ class WGLProgram {
      * Set uniform values in this shader program. When rendering, all {@link WGLProgram.use} before calling this function.
      * @param uniform_values - An object with the keys being the uniform variable names and the values being the uniform values
      */
-    setUniforms(uniform_values: {[key: string]: (number | number[])}): void {
+    setUniforms(uniform_values: Record<string, (number | number[])>): void {
         Object.entries(uniform_values).forEach(([u_name, value]) => {
             const {type, location} = this.uniforms[u_name];
             this.gl['uniform' + UNIFORM_FUNCTION_TYPES[type]](location, value);
@@ -187,7 +177,7 @@ class WGLProgram {
      * Bind textures to samplers in this shader program. When rendring, call {@link WGLProgram.use} before calling this function.
      * @param textures - An object with the keys being the sampler names in the source code and the values being the textures to associate with each sampler
      */
-    bindTextures(textures: {[key: string]: WGLTexture}) {
+    bindTextures(textures: Record<string, WGLTexture>) {
         Object.entries(textures).forEach(([sampler_name, texture], gl_tex_num) => {
             texture.bindToProgram(this.uniforms[sampler_name]['location'], gl_tex_num);
         });
