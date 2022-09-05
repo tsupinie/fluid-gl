@@ -90,7 +90,7 @@ class WGLProgram {
 
     /** @internal */
     n_verts: number;
-    
+
     /** @internal */
     draw_mode: number;
 
@@ -129,8 +129,8 @@ class WGLProgram {
     }
 
     /**
-     * Enable this program for rendering and optionally bind attribute, uniform, and texture values. This function should be called before calling bindAttributes(),
-     * setUniforms(), or bindTextures() on a given rendering pass.
+     * Enable this program for rendering and optionally bind attribute, uniform, and texture values. This function should be called before calling 
+     * {@link WGLProgram.bindAttributes}, {@link WGLProgram.setUniforms}, or {@link WGLProgram.bindTextures} on a given rendering pass.
      * @param attribute_buffers - An object with the keys being the attribute variable names and the values being the buffers to associate with each variable
      * @param uniform_values    - An object with the keys being the uniform variable names and the values being the uniform values
      * @param textures          - An object with the keys being the sampler names in the source code and the values being the textures to associate with each sampler
@@ -155,7 +155,7 @@ class WGLProgram {
     }
 
     /**
-     * Bind attribute buffers to variables in this shader program. Call use() on a rendering pass before calling this function.
+     * Bind attribute buffers to variables in this shader program. When rendring, call {@link WGLProgram.use} before calling this function.
      * @param attribute_buffers - An object with the keys being the attribute variable names and the values being the buffers to associate with each variable
      */
     bindAttributes(attribute_buffers: {[key: string]: WGLBuffer}): void {
@@ -173,7 +173,7 @@ class WGLProgram {
     }
 
     /**
-     * Set uniform values in this shader program. Call use() on a rendering pass before calling this function.
+     * Set uniform values in this shader program. When rendering, all {@link WGLProgram.use} before calling this function.
      * @param uniform_values - An object with the keys being the uniform variable names and the values being the uniform values
      */
     setUniforms(uniform_values: {[key: string]: (number | number[])}): void {
@@ -184,7 +184,7 @@ class WGLProgram {
     }
 
     /**
-     * Bind textures to samplers in this shader program. Call use() on a rendering pass before calling this function.
+     * Bind textures to samplers in this shader program. When rendring, call {@link WGLProgram.use} before calling this function.
      * @param textures - An object with the keys being the sampler names in the source code and the values being the textures to associate with each sampler
      */
     bindTextures(textures: {[key: string]: WGLTexture}) {
