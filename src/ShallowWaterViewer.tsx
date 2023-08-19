@@ -6,7 +6,7 @@ import * as React from "react";
 import {ShallowWaterSolver, ShallowWaterStateType, GridType} from "./ShallowWaterSolver";
 import "./ShallowWaterViewer.css";
 import Renderer from "./Renderer";
-import { WGLFramebuffer } from "./wgl/WGLFramebuffer";
+import { WGLFramebuffer } from "autumn-wgl";
 
 enum ICMethod {
     'random',
@@ -114,9 +114,8 @@ function ShallowWaterViewer(props) {
         let mouse_x = null, mouse_y = null;
     
         const gl = canvas.current.getContext('webgl');
-
-        WGLFramebuffer.screen.registerGLContext(gl);
-        WGLFramebuffer.screen.clear([0., 0., 0., 1.]);
+        
+        WGLFramebuffer.screen(gl).clear([0., 0., 0., 1.]);
     
         const nx = canvas.current.width / 2;
         const ny = canvas.current.height / 2;

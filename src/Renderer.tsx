@@ -1,7 +1,7 @@
 
 import {ShallowWaterSolver} from "./ShallowWaterSolver";
 import {colormaps} from "./colormap";
-import { WGLBuffer, WGLProgram, WGLTexture, WGLFramebuffer } from "./wgl"
+import { WGLBuffer, WGLProgram, WGLTexture, WGLFramebuffer } from "autumn-wgl"
 
 const render_vertex_shader_src = require('./glsl/render_vertex.glsl');
 const render_fragment_shader_src = require('./glsl/render.glsl');
@@ -105,7 +105,7 @@ class Renderer {
             {'u_sampler': this.solver.getStateTexture(), 'u_colormap_sampler': this.cmap_texture}
         );
 
-        WGLFramebuffer.screen.renderTo(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
+        WGLFramebuffer.screen(this.solver.gl).renderTo(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
 
         this.program.draw();
     }

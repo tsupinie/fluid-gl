@@ -1,5 +1,5 @@
 
-import { WGLBuffer, WGLFramebuffer, flipFlopBuffers, WGLProgram, WGLTexture, WGLTextureSpec } from "./wgl";
+import { WGLBuffer, WGLFramebuffer, flipFlopBuffers, WGLProgram, WGLTexture, WGLTextureSpec } from "autumn-wgl";
 
 const solver_vertex_shader_src = require('./glsl/solver_vertex.glsl');
 
