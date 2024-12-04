@@ -155,7 +155,7 @@ function ShallowWaterViewer(props) {
                     fps += fps_first_frame == 0 ? (fps_this_frame - fps) / n_frames : (fps_this_frame - fps_first_frame) / n_frames;
                 }
     
-                readout_str = `${Math.round(fps * 100) / 100} FPS (${Math.round(fps * dt * 10) / 10} × realtime)`;
+                readout_str = `${fps.toFixed(2)} FPS (${(fps * dt).toFixed(1)} × realtime)`;
             }
     
             advance_and_render(dt);
