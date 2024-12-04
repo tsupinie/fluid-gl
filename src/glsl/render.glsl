@@ -11,7 +11,7 @@ highp float cmap_max = 1.;
 void main() {
     highp float dot_pos = length(v_tex_coord - vec2(0.5, 0.5));
 
-    if (dot_pos > 0.5) discard;
+    if (dot_pos > 0.6) discard;
 
     highp float logistic_k = 250.;
     highp float logistic_max = 1.;
@@ -22,7 +22,7 @@ void main() {
 
     highp float cmap_coord = clamp((scaled_hght - cmap_min) / (cmap_max - cmap_min), 0., 1.);
     highp vec3 color = texture2D(u_colormap_sampler, vec2(cmap_coord, 0.5)).rgb;
-    highp float alpha = clamp((0.5 - dot_pos) / (0.5 - 0.4), 0., 1.);
+    highp float alpha = clamp((0.6 - dot_pos) / (0.6 - 0.4), 0., 1.);
 
     gl_FragColor = vec4(color, alpha);
 }

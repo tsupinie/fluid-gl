@@ -98,6 +98,7 @@ class Renderer {
 
     render() : void {
         const grid = this.solver.grid;
+        const gl = this.solver.gl;
 
         this.program.use(
             {'a_pos': this.vertices, 'a_offset': this.offsets, 'a_tex_coord': this.texcoords},
@@ -105,7 +106,10 @@ class Renderer {
             {'u_sampler': this.solver.getStateTexture(), 'u_colormap_sampler': this.cmap_texture}
         );
 
-        WGLFramebuffer.screen(this.solver.gl).renderTo(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
+        WGLFramebuffer.screen(gl).renderTo(0, 0, (grid['nx'] - 1) * 2, (grid['ny'] - 1) * 2);
+
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
         this.program.draw();
     }
