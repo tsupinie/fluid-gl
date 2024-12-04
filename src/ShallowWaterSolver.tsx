@@ -19,7 +19,7 @@ interface ShallowWaterStateType {
 }
 
 class ShallowWaterSolver {
-    gl: WebGLRenderingContext
+    gl: WebGL2RenderingContext
     grid: GridType;
 
     program: WGLProgram;
@@ -31,7 +31,7 @@ class ShallowWaterSolver {
     main_state_fb: WGLFramebuffer;
     aux_fb: WGLFramebuffer[];
 
-    constructor(gl: WebGLRenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
+    constructor(gl: WebGL2RenderingContext, grid: GridType, initial_state: ShallowWaterStateType) {
         this.gl = gl;
         this.grid = grid;
 
@@ -46,7 +46,7 @@ class ShallowWaterSolver {
 
         gl.getExtension('OES_texture_float');
         gl.getExtension('OES_texture_float_linear');
-        gl.getExtension('WEBGL_color_buffer_float');
+        gl.getExtension('EXT_color_buffer_float');
 
         // Compile the shader programs
         this.program = new WGLProgram(gl, solver_vertex_shader_src, solver_fragment_shader_src);
@@ -61,7 +61,7 @@ class ShallowWaterSolver {
 
         // Setup the main state and auxiliary rendering framebuffers
         const state_img = {
-            'format': gl.RGBA, 'type': gl.FLOAT, 
+            'format': gl.RGBA32F, 'type': gl.FLOAT, 
             'width': this.grid['nx'], 'height': this.grid['ny'], 'image': null,
             'mag_filter': gl.LINEAR
         }
@@ -97,7 +97,7 @@ class ShallowWaterSolver {
         }
 
         const state_img = {
-            'format': gl.RGBA, 'type': gl.FLOAT, 
+            'format': gl.RGBA32F, 'type': gl.FLOAT, 
             'width': this.grid['nx'], 'height': this.grid['ny'], 'image': img_data
         }
 

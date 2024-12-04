@@ -113,7 +113,7 @@ function ShallowWaterViewer(props) {
     
         let mouse_x = null, mouse_y = null;
     
-        const gl = canvas.current.getContext('webgl');
+        const gl = canvas.current.getContext('webgl2');
         
         WGLFramebuffer.screen(gl).clear([0., 0., 0., 1.]);
     
